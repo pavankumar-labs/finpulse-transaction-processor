@@ -1,9 +1,10 @@
 package com.finpulse;
 
-import java.io.IOException;
+
+import java.util.List;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -14,12 +15,26 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class FileIngestionController {
 
-    private final FileIngestionService service;
+    private final TransactionBatchCoordinator coordinator;
 
     @PostMapping(value = "/v1/ledger/upload", consumes = "multipart/form-data")
-    public String ingestFile(@RequestPart("file") MultipartFile file) throws IOException{
-        service.ingestFile(file);
-        return "File uploaded successfully";
+    public ResponseEntity<String> ingestFile(@RequestPart("file") List<MultipartFile> files) {
+        try{
+            for(MultipartFile file:files){
+                if(!file.isEmpty()){
+                    coordinator.streamFileContents(
+                        file.getInputStream()
+                    );
+                }
+            }
+            return ResponseEntity.ok(
+                "Files submitted to processing pipeline successfully."
+            );
+        }
+        catch(Exception e){
+             return ResponseEntity.status(500)
+                .body("Error: " + e.getMessage());
+        }
     }
     
 }

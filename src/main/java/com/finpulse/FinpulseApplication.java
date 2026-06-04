@@ -7,6 +7,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class FinpulseApplication {
 
     public static void main(String[] args) {
+                int cores = Runtime.getRuntime().availableProcessors();
+        System.out.println("Cores: " + cores);
+        System.out.println("Recommended threads: " + (cores * 2));
+
         SpringApplication.run(FinpulseApplication.class, args);
     }
 
