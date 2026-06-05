@@ -1,4 +1,4 @@
-package com.finpulse;
+package com.finpulse.service;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -7,6 +7,8 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
+
+import com.finpulse.ingestion.FileChunk;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 
@@ -14,11 +16,11 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class TransactionBatchCoordinator{
 
-    private final BlockingQueue<List<String>> transactionQueue;
+    private final BlockingQueue<FileChunk> transactionQueue;
 
      private static final int CHUNK_SIZE = 4000;
 
-    public void streamFileContents(InputStream fileInputStream)
+    public void streamFileContents(String fileName,InputStream fileInputStream)
                                             throws IOException,InterruptedException{
 
 
@@ -32,13 +34,13 @@ public class TransactionBatchCoordinator{
             while ((line=reader.readLine())!=null) {
                 currentChunk.add(line);
                 if(currentChunk.size()==CHUNK_SIZE){
-                    transactionQueue.put(currentChunk);
+                    transactionQueue.put(new FileChunk(fileName,currentChunk));
                     currentChunk=new ArrayList<>(CHUNK_SIZE);
                 }   
             }
 
             if (!currentChunk.isEmpty()) {
-                transactionQueue.put(currentChunk);
+                transactionQueue.put(new FileChunk(fileName, currentChunk));
             }
         }
        

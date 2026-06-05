@@ -1,4 +1,4 @@
-package com.finpulse;
+package com.finpulse.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -47,13 +47,6 @@ public class Transaction {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    @PrePersist
-    public void prePersist(){
-        this.createdAt=LocalDateTime.now();
-        if(status==null){
-            this.status=ProcessingStatus.PENDING;
-        }
-    }
-
+ 
 
 }

@@ -1,7 +1,9 @@
-package com.finpulse;
+package com.finpulse.controller;
 
 
 import java.util.List;
+
+import com.finpulse.service.TransactionBatchCoordinator;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,7 +25,9 @@ public class FileIngestionController {
             for(MultipartFile file:files){
                 if(!file.isEmpty()){
                     coordinator.streamFileContents(
+                          file.getOriginalFilename(),
                         file.getInputStream()
+                        
                     );
                 }
             }

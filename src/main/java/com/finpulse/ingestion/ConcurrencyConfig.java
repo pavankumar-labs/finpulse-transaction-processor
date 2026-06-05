@@ -1,11 +1,11 @@
 
-package com.finpulse;
+package com.finpulse.ingestion;
 
-import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -18,7 +18,7 @@ public class ConcurrencyConfig {
     private static final int QUEUE_CAPACITY=20;
 
     @Bean
-    public BlockingQueue<List<String>> transactionQueue(){
+    public BlockingQueue<FileChunk> transactionQueue(){
 
         return new LinkedBlockingQueue<>(QUEUE_CAPACITY);
     }
