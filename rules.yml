@@ -1,0 +1,58 @@
+groups:
+  - name: finpulse_alerts
+    rules:
+      - alert: FinPulseDown
+        expr: up{job="finpulse-app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "FinPulse Application Down"
+          description: "Prometheus cannot reach FinPulse for more than 1 minute."
+
+
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis Down"
+          description: "Redis exporter cannot reach Redis."
+
+
+      - alert: JVMMemoryHigh
+        expr: (
+          sum(jvm_memory_used_bytes{area="heap"})
+          /
+          sum(jvm_memory_max_bytes{area="heap"})) > 0.85
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "JVM Heap Usage High"
+          description: "Heap memory above 85% for more than 3 minutes."
+
+      - alert: WorkerThreadsBusy
+        expr: finpulse_active_threads > 7
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Worker Pool Saturated"
+          description: "Most ingestion worker threads are busy."
+
+
+      - alert: DatabaseConnectionPressure
+        expr: hikaricp_connections_pending > 0
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Database Connection Pressure"
+          description: "Threads waiting for database connections."
+
+
+
+
+

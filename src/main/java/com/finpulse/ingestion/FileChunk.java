@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class FileChunk {
 
+    private  final String fileProcessingId;
     private final String fileName;
     private final List<String> lines;
     

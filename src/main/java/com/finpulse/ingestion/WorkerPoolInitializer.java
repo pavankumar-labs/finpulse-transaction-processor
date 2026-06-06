@@ -14,6 +14,9 @@ import java.util.concurrent.TimeUnit;
 
 import com.finpulse.entity.ProcessingStatus;
 import com.finpulse.entity.Transaction;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ParameterizedPreparedStatementSetter;
 import org.springframework.stereotype.Component;
@@ -26,6 +29,10 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 @Slf4j
 public class WorkerPoolInitializer {
+
+    private final MeterRegistry meterRegistry;
+
+    private Timer batchInsertTimer;
 
     private final ExecutorService workerThreadPool;
 
@@ -46,6 +53,13 @@ public class WorkerPoolInitializer {
 
     @PostConstruct
     public void startWorkers(){
+        batchInsertTimer=Timer.builder("finpulse.batch.insert.duration")
+                .description("Time taken to insert transaction batches")
+                .register(meterRegistry);
+        Gauge.builder("finpulse.active.threads",
+                        ()->((ThreadPoolExecutor)workerThreadPool).getActiveCount())
+                .description("Current active worker threads")
+                .register(meterRegistry);
         int poolSize=((ThreadPoolExecutor)workerThreadPool).getCorePoolSize();
         for(int i=0; i<poolSize;i++){
             workerThreadPool.submit(new WorkerTask());
@@ -78,6 +92,12 @@ public class WorkerPoolInitializer {
 
         }
         private void processChunk(FileChunk fileChunk){
+            log.info(
+                    "Chunk processing started. fileProcessingId={}, fileName={}, rows={}",
+                    fileChunk.getFileProcessingId(),
+                    fileChunk.getFileName(),
+                    fileChunk.getLines().size()
+            );
 
             List<Transaction> batch= new ArrayList<>();
 
@@ -86,7 +106,7 @@ public class WorkerPoolInitializer {
                 try{
                     if(line==null || line.isBlank())continue;
 
-                   Transaction transaction=validateAndBuildTransaction(line,fileChunk.getFileName());
+                   Transaction transaction=validateAndBuildTransaction(fileChunk.getFileProcessingId(),line,fileChunk.getFileName());
 
                    if(transaction!=null){
                         batch.add(transaction);
@@ -101,9 +121,13 @@ public class WorkerPoolInitializer {
                 }
                 catch (Exception e) {
                     log.error(
-                            "Unexpected error while processing row",
+                            "Unexpected processing error. " +
+                                    "fileProcessingId={}, fileName={}, row={}",
+                            fileChunk.getFileProcessingId(),
+                            fileChunk.getFileName(),
+                            line,
                             e
-                        );
+                    );
                 }
             }
             if (!batch.isEmpty()) {
@@ -114,41 +138,67 @@ public class WorkerPoolInitializer {
             finally{
                 batch.clear();
             }
+            log.info(
+                    "Chunk processing completed. fileProcessingId={}, fileName={}, rows={}",
+                    fileChunk.getFileProcessingId(),
+                    fileChunk.getFileName(),
+                    fileChunk.getLines().size()
+            );
         }
         private void flushBatchToDatabase(List<Transaction> batch){
-            jdbcTemplate.batchUpdate(INSERT_TRANSACTION_SQL,batch,batch.size(),new ParameterizedPreparedStatementSetter<Transaction>() {
-                @Override
-                public void setValues(PreparedStatement ps,Transaction t) throws SQLException{
-                    ps.setString(1, t.getTransactionId());
-                    ps.setString(2, t.getSenderAccount());
-                    ps.setString(3, t.getReceiverAccount());
-                    ps.setBigDecimal(4, t.getAmount());
-                    ps.setString(5, t.getTransactionType());
-                    ps.setTimestamp(6,Timestamp.valueOf(t.getTransactionTime()) );
-                    ps.setString(7, t.getStatus().name());
-                    ps.setString(8, t.getFileName());
-                     }
+            log.info(
+                    "Batch insert started. size={}",
+                    batch.size()
+            );
+            batchInsertTimer.record(()->{
+                jdbcTemplate.batchUpdate(INSERT_TRANSACTION_SQL,batch,batch.size(),new ParameterizedPreparedStatementSetter<Transaction>() {
+                    @Override
+                    public void setValues(PreparedStatement ps,Transaction t) throws SQLException{
+                        ps.setString(1, t.getTransactionId());
+                        ps.setString(2, t.getSenderAccount());
+                        ps.setString(3, t.getReceiverAccount());
+                        ps.setBigDecimal(4, t.getAmount());
+                        ps.setString(5, t.getTransactionType());
+                        ps.setTimestamp(6,Timestamp.valueOf(t.getTransactionTime()) );
+                        ps.setString(7, t.getStatus().name());
+                        ps.setString(8, t.getFileName());
+                    }
+                });
             });
+            log.info(
+                    "Batch insert completed. size={}",
+                    batch.size()
+            );
+
+
         }
 
-        private Transaction validateAndBuildTransaction(String line,String fileName){
+        private Transaction validateAndBuildTransaction(String fileProcessingId,String line,String fileName){
 
             String[] fields = line.split(",");
             BigDecimal amount;
             LocalDateTime transactionTime;
             if (fields.length!=6) {
-                log.warn("file {} rejected invalid field count in line {}",
-                    fileName,
-                    line
+                log.warn(
+                        "Transaction validation failed. " +
+                                "fileProcessingId={}, fileName={}, reason={}, row={}",
+                        fileProcessingId,
+                        fileName,
+                        "FIELD_SIZE_INVALID",
+                        line
                 );
                 return null;      
             }
             if(fields[0].isBlank() || fields[1].isBlank() || fields[2].isBlank()
             || fields[3].isBlank() || fields[4].isBlank()  ||  fields[5].isBlank()){
 
-            log.warn("file {} rejected due to missing fields in line {}",
-                line,
-                fileName
+            log.warn(
+                    "Transaction validation failed. " +
+                            "fileProcessingId={}, fileName={}, reason={}, transactionId={}",
+                    fileProcessingId,
+                    fileName,
+                    "INSUFFICIENT_FIELDS",
+                    fields[0]
             );
             return null;
             }
@@ -158,25 +208,40 @@ public class WorkerPoolInitializer {
             }
             catch(NumberFormatException e){
                 log.warn(
-                        "File {} rejected row due to invalid amount: {}",
+                        "Transaction validation failed. " +
+                                "fileProcessingId={}, fileName={}, reason={}, transactionId={}",
+                        fileProcessingId,
                         fileName,
-                        line
-                    );
+                        "INVALID_AMOUNT",
+                        fields[0]
+
+                );
                 return null;
             }
               if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-                log.warn("file {} rejected row due to negative ampunt: {}",fileName,
-                    line
-                );
+                  log.warn(
+                          "Transaction validation failed. " +
+                                  "fileProcessingId={}, fileName={}, reason={}, transactionId={},amount={}",
+                          fileProcessingId,
+                          fileName,
+                          "NEGATIVE_AMOUNT",
+                          fields[0],
+                          fields[3]
+                  );
                 return null;
             }
             try{
                  transactionTime=LocalDateTime.parse(fields[5]);
             }
             catch(Exception e){
-                log.warn("File {} rejected row due to invalid date: {}",
-                    fileName,
-                    line
+
+                log.warn(
+                        "Transaction validation failed. " +
+                                "fileProcessingId={}, fileName={}, reason={}, transactionId={}",
+                        fileProcessingId,
+                        fileName,
+                        "INVALID_DATE",
+                        fields[0]
                 );
                 return null;
             }

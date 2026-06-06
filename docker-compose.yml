@@ -1,0 +1,116 @@
+
+services:
+  mysql-container:
+    image: mysql:8.0
+    container_name: mysql-container
+    env_file:
+      - .env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: finpulse_db
+    ports:
+      - "3307:3306"
+    volumes:
+      - finpulse-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - finpulse-network
+
+  redis-container:
+    image: redis:7.2
+    container_name: redis-container
+    ports:
+      - "6380:6379"
+    networks:
+      - finpulse-network
+
+  prometheus-container:
+    image: prom/prometheus
+    container_name: prometheus-container
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./rules.yml:/etc/prometheus/rules.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - finpulse-network
+
+  grafana-container:
+    image: grafana/grafana
+    container_name: grafana-container
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    env_file:
+      - .env
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+    networks:
+      - finpulse-network
+
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: redis-exporter
+    environment:
+      - REDIS_ADDR=redis://redis-container:6379
+    ports:
+      - "9121:9121"
+    depends_on:
+      - redis-container
+    networks:
+      - finpulse-network
+
+  finpulse-app:
+    build: .
+    container_name: finpulse-app
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+
+    depends_on:
+      mysql-container:
+        condition: service_healthy
+      redis-container:
+        condition: service_started
+
+    networks:
+      - finpulse-network
+
+networks:
+  finpulse-network:
+    driver: bridge
+
+
+volumes:
+  finpulse-mysql-data:
+  prometheus_data:
+  grafana_data:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

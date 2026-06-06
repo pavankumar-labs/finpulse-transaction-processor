@@ -1,0 +1,57 @@
+spring:
+  application:
+    name: finpulse
+
+  profiles:
+    active: dev
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl:
+        auto: none
+
+
+  sql:
+    init:
+      mode: never
+  cache:
+    type: redis
+
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+
+  swagger-ui:
+    path: /swagger-ui/index.html
+
+
+
+
+
+server:
+  port: 8080
+
+
+management:
+  metrics:
+    tags:
+      application: finpulse
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus
+
+  endpoint:
+    prometheus:
+      enabled: true
+
+fraud:
+  high-count-threshold: 10
+  high-receiver-threshold: 5
+  repeat-transfer-threshold: 5
+  high-amount-threshold: 150000
+  high-amount-count-threshold: 5
