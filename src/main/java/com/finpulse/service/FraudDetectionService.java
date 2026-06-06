@@ -5,12 +5,14 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.finpulse.config.CacheConfig;
 import com.finpulse.repository.TransactionRepository;
 import com.finpulse.dto.FraudDetectionResponseDTO;
 import com.finpulse.dto.HighReceiverAccountResponseDTO;
 import com.finpulse.dto.HighReceiverFraudResponseDTO;
 import com.finpulse.dto.SuspiciousAccountResponseDTO;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 
@@ -37,6 +39,11 @@ public class FraudDetectionService {
     
     private final TransactionRepository transactionRepository;
 
+
+    @Cacheable(
+            value = CacheConfig.FRAUD,
+            key = "'highValue_'+#startTime+'_'+#endTime"
+    )
     public FraudDetectionResponseDTO getHighTransactionCountAccounts
             (LocalDateTime startTime,LocalDateTime endTime){
         List<SuspiciousAccountResponseDTO> accounts=transactionRepository
@@ -48,6 +55,10 @@ public class FraudDetectionService {
         .build();
     }
 
+    @Cacheable(
+            value = CacheConfig.FRAUD,
+            key = "'duplicates_'+#startTime+'_'+#endTime"
+    )
      public FraudDetectionResponseDTO  getHighRepeativeTransactionAccounts
             (LocalDateTime startTime,LocalDateTime endTime){
         List<SuspiciousAccountResponseDTO> accounts=transactionRepository
@@ -59,6 +70,10 @@ public class FraudDetectionService {
         .build();
     }
 
+    @Cacheable(
+            value = CacheConfig.FRAUD,
+            key = "'rapidTransfers_'+#startTime+'_'+#endTime"
+    )
     public HighReceiverFraudResponseDTO getHighReceivingAccounts
             (LocalDateTime startTime,LocalDateTime endTime){
         List<HighReceiverAccountResponseDTO> accounts=transactionRepository
@@ -70,6 +85,10 @@ public class FraudDetectionService {
         .build();
     }
 
+
+    @Cacheable(
+            value = CacheConfig.FRAUD,
+            key = "'velocity_'+#startTime+'_'+#endTime" )
      public FraudDetectionResponseDTO  getHighTransactionAmountAccounts
             (LocalDateTime startTime,LocalDateTime endTime){
         List<SuspiciousAccountResponseDTO> accounts=transactionRepository
