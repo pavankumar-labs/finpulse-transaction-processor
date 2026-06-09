@@ -7,13 +7,9 @@ spring:
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-
   jpa:
     hibernate:
-      ddl:
-        auto: none
-
-
+      ddl-auto: none
   sql:
     init:
       mode: never
@@ -24,17 +20,11 @@ spring:
 springdoc:
   api-docs:
     path: /v3/api-docs
-
   swagger-ui:
     path: /swagger-ui/index.html
 
-
-
-
-
 server:
   port: 8080
-
 
 management:
   metrics:
@@ -44,7 +34,6 @@ management:
     web:
       exposure:
         include: health,metrics,prometheus
-
   endpoint:
     prometheus:
       enabled: true
@@ -55,3 +44,8 @@ fraud:
   repeat-transfer-threshold: 5
   high-amount-threshold: 150000
   high-amount-count-threshold: 5
+
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB

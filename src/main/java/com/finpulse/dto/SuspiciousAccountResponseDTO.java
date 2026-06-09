@@ -1,4 +1,3 @@
-
 package com.finpulse.dto;
 
 import java.math.BigDecimal;
@@ -15,7 +14,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class SuspiciousAccountResponseDTO {
 
-
     private String  senderAccount;
 
     private Long transactionCount;
@@ -25,6 +23,5 @@ public class SuspiciousAccountResponseDTO {
     private LocalDateTime firstTransactionTime;
 
     private LocalDateTime lastTransactionTime;
-
 
 }

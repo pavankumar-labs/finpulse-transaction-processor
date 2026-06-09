@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
-
 import com.finpulse.ingestion.FileChunk;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -23,12 +22,9 @@ import lombok.RequiredArgsConstructor;
 public class TransactionBatchCoordinator{
 
     private final MeterRegistry registry;
-
     private Counter filesReceivedCounter;
-
     private final BlockingQueue<FileChunk> transactionQueue;
-
-     private static final int CHUNK_SIZE = 4000;
+    private static final int CHUNK_SIZE = 4000;
 
      @PostConstruct
      public void initializeMetrics(){
@@ -37,12 +33,12 @@ public class TransactionBatchCoordinator{
                  .register(registry);
      }
 
-    public void streamFileContents(String fileName,InputStream fileInputStream)
+    public String streamFileContents(String fileName,InputStream fileInputStream)
                                             throws IOException,InterruptedException{
-
          filesReceivedCounter.increment();
         String fileProcessingId =
                 UUID.randomUUID().toString();
+
         log.info(
                 "File ingestion started. fileProcessingId={}, fileName={}",
                 fileProcessingId,
@@ -51,7 +47,6 @@ public class TransactionBatchCoordinator{
         try(BufferedReader reader=new BufferedReader(new InputStreamReader(fileInputStream))){
 
             reader.readLine();
-
             String line;
             List<String> currentChunk=new ArrayList<>(CHUNK_SIZE);
 
@@ -67,6 +62,7 @@ public class TransactionBatchCoordinator{
                 transactionQueue.put(new FileChunk(fileProcessingId,fileName, currentChunk));
             }
         }
-       
+        return fileProcessingId;
 }
+
 }

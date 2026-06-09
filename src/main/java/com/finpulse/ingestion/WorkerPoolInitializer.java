@@ -5,13 +5,12 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
 import com.finpulse.entity.ProcessingStatus;
 import com.finpulse.entity.Transaction;
 import io.micrometer.core.instrument.Gauge;
@@ -25,23 +24,18 @@ import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+
 @RequiredArgsConstructor
 @Component
 @Slf4j
 public class WorkerPoolInitializer {
 
     private final MeterRegistry meterRegistry;
-
     private Timer batchInsertTimer;
-
-    private final ExecutorService workerThreadPool;
-
+    private final ThreadPoolExecutor workerThreadPool;
     private final BlockingQueue<FileChunk> transactionQueue;
-    
-     private final JdbcTemplate jdbcTemplate;
-
+    private final JdbcTemplate jdbcTemplate;
     private static final int DB_BATCH_SIZE = 500;
-
     private volatile boolean isRunning = true;
 
     private static final String INSERT_TRANSACTION_SQL =
@@ -50,20 +44,29 @@ public class WorkerPoolInitializer {
         "transaction_type, transaction_time, status, file_name) " +
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
+    private static final List<DateTimeFormatter> FORMATTERS = List.of(
+            DateTimeFormatter.ISO_LOCAL_DATE_TIME,
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"),
+            DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss"),
+            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")
+    );
 
     @PostConstruct
     public void startWorkers(){
         batchInsertTimer=Timer.builder("finpulse.batch.insert.duration")
                 .description("Time taken to insert transaction batches")
+                .publishPercentiles(0.5, 0.95, 0.99)
                 .register(meterRegistry);
         Gauge.builder("finpulse.active.threads",
-                        ()->((ThreadPoolExecutor)workerThreadPool).getActiveCount())
+                        workerThreadPool,ThreadPoolExecutor::getActiveCount)
                 .description("Current active worker threads")
                 .register(meterRegistry);
-        int poolSize=((ThreadPoolExecutor)workerThreadPool).getCorePoolSize();
+        int poolSize=workerThreadPool.getCorePoolSize();
         for(int i=0; i<poolSize;i++){
             workerThreadPool.submit(new WorkerTask());
         }
+
     }
 
     @PreDestroy
@@ -71,12 +74,10 @@ public class WorkerPoolInitializer {
         isRunning=false;
     }
 
-
     private class WorkerTask implements Runnable{
 
         @Override
         public void run(){
-
             while (isRunning || !transactionQueue.isEmpty()) {
                 try{
                     FileChunk fileChunk=transactionQueue.poll(1,TimeUnit.SECONDS);
@@ -91,6 +92,7 @@ public class WorkerPoolInitializer {
             }
 
         }
+
         private void processChunk(FileChunk fileChunk){
             log.info(
                     "Chunk processing started. fileProcessingId={}, fileName={}, rows={}",
@@ -105,19 +107,15 @@ public class WorkerPoolInitializer {
                  for(String line:fileChunk.getLines()){
                 try{
                     if(line==null || line.isBlank())continue;
-
-                   Transaction transaction=validateAndBuildTransaction(fileChunk.getFileProcessingId(),line,fileChunk.getFileName());
-
+                    Transaction transaction=validateAndBuildTransaction
+                            (fileChunk.getFileProcessingId(),line,fileChunk.getFileName());
                    if(transaction!=null){
                         batch.add(transaction);
                    }
-            
                 if (batch.size()==DB_BATCH_SIZE) {
                     flushBatchToDatabase(batch);
-                
                     batch.clear();   
                 }
-
                 }
                 catch (Exception e) {
                     log.error(
@@ -129,6 +127,7 @@ public class WorkerPoolInitializer {
                             e
                     );
                 }
+
             }
             if (!batch.isEmpty()) {
                 flushBatchToDatabase(batch);
@@ -145,11 +144,14 @@ public class WorkerPoolInitializer {
                     fileChunk.getLines().size()
             );
         }
+
         private void flushBatchToDatabase(List<Transaction> batch){
+
             log.info(
                     "Batch insert started. size={}",
                     batch.size()
             );
+
             batchInsertTimer.record(()->{
                 jdbcTemplate.batchUpdate(INSERT_TRANSACTION_SQL,batch,batch.size(),new ParameterizedPreparedStatementSetter<Transaction>() {
                     @Override
@@ -165,11 +167,11 @@ public class WorkerPoolInitializer {
                     }
                 });
             });
+
             log.info(
                     "Batch insert completed. size={}",
                     batch.size()
             );
-
 
         }
 
@@ -177,7 +179,6 @@ public class WorkerPoolInitializer {
 
             String[] fields = line.split(",");
             BigDecimal amount;
-            LocalDateTime transactionTime;
             if (fields.length!=6) {
                 log.warn(
                         "Transaction validation failed. " +
@@ -224,28 +225,28 @@ public class WorkerPoolInitializer {
                                   "fileProcessingId={}, fileName={}, reason={}, transactionId={},amount={}",
                           fileProcessingId,
                           fileName,
-                          "NEGATIVE_AMOUNT",
+                          "NON_POSITIVE_AMOUNT",
                           fields[0],
                           fields[3]
                   );
                 return null;
             }
-            try{
-                 transactionTime=LocalDateTime.parse(fields[5]);
+            LocalDateTime transactionTime = null;
+            for (DateTimeFormatter formatter : FORMATTERS) {
+                try {
+                    transactionTime = LocalDateTime.parse(fields[5].trim(), formatter);
+                    break;
+                } catch (Exception ignored) {
+                }
             }
-            catch(Exception e){
-
+            if (transactionTime == null) {
                 log.warn(
                         "Transaction validation failed. " +
                                 "fileProcessingId={}, fileName={}, reason={}, transactionId={}",
-                        fileProcessingId,
-                        fileName,
-                        "INVALID_DATE",
-                        fields[0]
+                        fileProcessingId, fileName, "INVALID_DATE", fields[0]
                 );
                 return null;
             }
-         
 
             return Transaction.builder()
                                     .transactionId(fields[0])
@@ -254,14 +255,10 @@ public class WorkerPoolInitializer {
                                     .amount(amount)
                                     .transactionType(fields[4])
                                     .transactionTime(transactionTime)
-                                    .status(ProcessingStatus.PENDING)
+                                    .status(ProcessingStatus.PROCESSING)
                                     .fileName(fileName)
                                     .build();
 
-
         }
-    
     }
-
-    
 }

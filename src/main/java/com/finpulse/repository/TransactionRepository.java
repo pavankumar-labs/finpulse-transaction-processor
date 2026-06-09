@@ -1,10 +1,6 @@
 package com.finpulse.repository;
 
-
-import com.finpulse.dto.HighReceiverAccountResponseDTO;
-import com.finpulse.dto.StatusSummaryDTO;
-import com.finpulse.dto.SuspiciousAccountResponseDTO;
-import com.finpulse.dto.TopTraderResponseDTO;
+import com.finpulse.dto.*;
 import com.finpulse.entity.ProcessingStatus;
 import com.finpulse.entity.Transaction;
 import org.springframework.data.domain.Pageable;
@@ -18,12 +14,8 @@ import java.util.List;
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
 
     List<Transaction> findByStatus(ProcessingStatus status);
-
     List<Transaction> findByFileName(String fileName);
-
     boolean existsByTransactionId(String transactionId);
-
-
 
     @Query("""
             SELECT new com.finpulse.dto.HighReceiverAccountResponseDTO(
@@ -45,8 +37,9 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
 
        @Query("""
-            select new com.finpulse.dto.SuspiciousAccountResponseDTO(
+            select new com.finpulse.dto.RepeatTransferResponseDTO(
             t.senderAccount,
+            t.receiverAccount,
             count(t),
             sum(t.amount),
             min(t.transactionTime),
@@ -58,7 +51,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             group by t.senderAccount,t.receiverAccount
             having count(t) >= :transactionCountThreshold
             """)
-    List<SuspiciousAccountResponseDTO> findHighRepeativeTransactionAccounts(
+    List<RepeatTransferResponseDTO> findHighRepeativeTransactionAccounts(
        @Param("startTime") LocalDateTime startTime,
        @Param("endTime") LocalDateTime endTime,
         @Param("transactionCountThreshold") long transactionCountThreshold);
@@ -85,7 +78,6 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
        @Param("transactionCountThreshold") long transactionCountThreshold);
 
 
-       
     @Query("""
             select new com.finpulse.dto.SuspiciousAccountResponseDTO(
             t.senderAccount,
@@ -106,9 +98,6 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
        @Param("transactionCountThreshold") long transactionCountThreshold);
 
 
-
-
-
     @Query("""
             select new com.finpulse.dto.TopTraderResponseDTO(
                 t.senderAccount,
@@ -126,6 +115,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     Pageable pageable
                        );
 
+
     @Query("""
             select new com.finpulse.dto.TopTraderResponseDTO(
                 t.senderAccount,
@@ -141,7 +131,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     @Param("startTime") LocalDateTime startTime,
     @Param("endTime") LocalDateTime endTime,
     Pageable pageable
-                       );
+    );
 
 
     @Query("""
@@ -159,16 +149,4 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("endTime") LocalDateTime endTime
     );
 
-
-
-    
-
-
-
-
-
-
-
-    
-    
 }

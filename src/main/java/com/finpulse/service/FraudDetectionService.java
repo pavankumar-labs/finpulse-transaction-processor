@@ -1,20 +1,16 @@
-
 package com.finpulse.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-
 import com.finpulse.config.CacheConfig;
+import com.finpulse.dto.*;
 import com.finpulse.repository.TransactionRepository;
-import com.finpulse.dto.FraudDetectionResponseDTO;
-import com.finpulse.dto.HighReceiverAccountResponseDTO;
-import com.finpulse.dto.HighReceiverFraudResponseDTO;
-import com.finpulse.dto.SuspiciousAccountResponseDTO;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
+
 
 @Service
 @RequiredArgsConstructor
@@ -35,51 +31,45 @@ public class FraudDetectionService {
     @Value("${fraud.high-receiver-threshold}")
     private long highReceiverThreshold;
 
-
-    
     private final TransactionRepository transactionRepository;
 
-
     @Cacheable(
-            value = CacheConfig.FRAUD,
-            key = "'highValue_'+#startTime+'_'+#endTime"
+            value = CacheConfig.FRAUD_HIGH_COUNT,
+            key = "#startTime+'_'+#endTime"
     )
     public FraudDetectionResponseDTO getHighTransactionCountAccounts
             (LocalDateTime startTime,LocalDateTime endTime){
         List<SuspiciousAccountResponseDTO> accounts=transactionRepository
         .findHighTransactionCountAccounts(startTime, endTime, highCountThreshold);
         return FraudDetectionResponseDTO.builder()
-        .generatedAt(LocalDateTime.now())
         .accounts(accounts)
         .totalSuspiciousAccounts(accounts.size())
         .build();
     }
 
     @Cacheable(
-            value = CacheConfig.FRAUD,
-            key = "'duplicates_'+#startTime+'_'+#endTime"
+            value = CacheConfig.FRAUD_DUPLICATES,
+            key = "#startTime+'_'+#endTime"
     )
-     public FraudDetectionResponseDTO  getHighRepeativeTransactionAccounts
+     public RepeatFraudResponseDTO  getHighRepeativeTransactionAccounts
             (LocalDateTime startTime,LocalDateTime endTime){
-        List<SuspiciousAccountResponseDTO> accounts=transactionRepository
+        List<RepeatTransferResponseDTO> accounts=transactionRepository
         .findHighRepeativeTransactionAccounts(startTime, endTime, repeatTransferThreshold);
-        return FraudDetectionResponseDTO.builder()
-        .generatedAt(LocalDateTime.now())
+        return RepeatFraudResponseDTO.builder()
         .accounts(accounts)
         .totalSuspiciousAccounts(accounts.size())
         .build();
     }
 
     @Cacheable(
-            value = CacheConfig.FRAUD,
-            key = "'rapidTransfers_'+#startTime+'_'+#endTime"
+            value = CacheConfig.FRAUD_HIGH_RECEIVING,
+            key = "#startTime+'_'+#endTime"
     )
     public HighReceiverFraudResponseDTO getHighReceivingAccounts
             (LocalDateTime startTime,LocalDateTime endTime){
         List<HighReceiverAccountResponseDTO> accounts=transactionRepository
         .findHighReceivingAccounts(startTime, endTime, highReceiverThreshold);
         return HighReceiverFraudResponseDTO.builder()
-        .generatedAt(LocalDateTime.now())
         .totalSuspiciousAccounts(accounts.size())
         .accounts(accounts)
         .build();
@@ -87,24 +77,16 @@ public class FraudDetectionService {
 
 
     @Cacheable(
-            value = CacheConfig.FRAUD,
-            key = "'velocity_'+#startTime+'_'+#endTime" )
+            value = CacheConfig.FRAUD_HIGH_AMOUNT,
+            key = "#startTime+'_'+#endTime" )
      public FraudDetectionResponseDTO  getHighTransactionAmountAccounts
             (LocalDateTime startTime,LocalDateTime endTime){
         List<SuspiciousAccountResponseDTO> accounts=transactionRepository
         .findHighTransactionAmountAccounts(highAmountThreshold, startTime, endTime, highAmountCountThreshold);
         return FraudDetectionResponseDTO.builder()
-        .generatedAt(LocalDateTime.now())
         .accounts(accounts)
         .totalSuspiciousAccounts(accounts.size())
         .build();
     }
-
-
-
-    
-
-
-
 
 }

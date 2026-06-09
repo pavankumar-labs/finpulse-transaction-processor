@@ -33,15 +33,6 @@ groups:
           summary: "JVM Heap Usage High"
           description: "Heap memory above 85% for more than 3 minutes."
 
-      - alert: WorkerThreadsBusy
-        expr: finpulse_active_threads > 7
-        for: 2m
-        labels:
-          severity: warning
-        annotations:
-          summary: "Worker Pool Saturated"
-          description: "Most ingestion worker threads are busy."
-
 
       - alert: DatabaseConnectionPressure
         expr: hikaricp_connections_pending > 0
@@ -51,6 +42,16 @@ groups:
         annotations:
           summary: "Database Connection Pressure"
           description: "Threads waiting for database connections."
+
+
+      - alert: BatchInsertionSlow
+        expr: finpulse_batch_insert_duration_seconds_max > 2
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Batch insertion is slow"
+          description: "Transaction batch insert is taking longer than 2 seconds"
 
 
 

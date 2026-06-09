@@ -12,15 +12,20 @@ import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
-
 import java.time.Duration;
 
 
 @Configuration
 @EnableCaching
 public class CacheConfig {
-    public static final String ANALYTICS = "analytics";
-    public static final String FRAUD = "fraud";
+
+    public static final String ANALYTICS_TOP_AMOUNT = "analytics-top-amount";
+    public static final String ANALYTICS_TOP_TXN = "analytics-top-txn";
+    public static final String ANALYTICS_STATUS = "analytics-status";
+    public static final String FRAUD_HIGH_COUNT = "fraud-high-count";
+    public static final String FRAUD_DUPLICATES = "fraud-duplicates";
+    public static final String FRAUD_HIGH_RECEIVING = "fraud-high-receiving";
+    public static final String FRAUD_HIGH_AMOUNT = "fraud-high-amount";
 
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory factory){
@@ -35,9 +40,6 @@ public class CacheConfig {
                 RedisSerializationContext
                         .SerializationPair
                         .fromSerializer(serializer);
-
-
-
 
         RedisCacheConfiguration configuration=
                 RedisCacheConfiguration.defaultCacheConfig()

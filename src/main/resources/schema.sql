@@ -13,4 +13,4 @@ create table if not exists transactions(
 );
 
 
-create index idx_transactoon_time_amount on transactions(transaction_time,amount);
+create index idx_transaction_time_amount on transactions(transaction_time,amount);
