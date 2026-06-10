@@ -2,19 +2,27 @@ spring:
   application:
     name: finpulse
 
-  profiles:
-    active: dev
+
+  spring.profiles.active: ${SPRING_PROFILES_ACTIVE:dev}
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
       ddl-auto: none
+    open-in-view: false
+
   sql:
     init:
       mode: never
   cache:
     type: redis
+
+
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
 
 
 springdoc:
@@ -45,7 +53,3 @@ fraud:
   high-amount-threshold: 150000
   high-amount-count-threshold: 5
 
-  servlet:
-    multipart:
-      max-file-size: 100MB
-      max-request-size: 100MB
