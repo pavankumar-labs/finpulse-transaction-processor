@@ -7,8 +7,7 @@ spring:
 
   sql:
     init:
-      mode: always
-      schema-locations: classpath:schema.sql
+      mode: never
   data:
     redis:
       host: redis-container

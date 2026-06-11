@@ -49,7 +49,7 @@ public class FileIngestionController {
                     fileProcessingIds.add(fileProcessingId);
                 } catch (Exception e) {
                     throw new InvalidFileException(
-                            "Failed to process file: " + file.getOriginalFilename()
+                            "Failed to process file: " + file.getOriginalFilename(),e
                     );
                 }
 
