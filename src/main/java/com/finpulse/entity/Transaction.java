@@ -48,4 +48,7 @@ public class Transaction {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+    @Column(name = "company_id", nullable = false)
+    private Long companyId;
+
 }

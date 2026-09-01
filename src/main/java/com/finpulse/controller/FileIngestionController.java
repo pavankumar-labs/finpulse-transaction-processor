@@ -4,7 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 import com.finpulse.dto.ApiResponse;
 import com.finpulse.exception.InvalidFileException;
+import com.finpulse.security.ApiKeyAuthFilter;
 import com.finpulse.service.TransactionBatchCoordinator;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,12 +25,13 @@ public class FileIngestionController {
 
     @PostMapping(value = "/v1/ledger/upload", consumes = "multipart/form-data")
     public ResponseEntity<ApiResponse<List<String>>> ingestFile
-            (@RequestPart("file") List<MultipartFile> files) throws Exception{
+            (@RequestPart("file") List<MultipartFile> files, HttpServletRequest request) throws Exception{
 
         if (files == null || files.isEmpty()) {
             throw new InvalidFileException("No files provided");
         }
 
+        Long companyId=(Long)request.getAttribute(ApiKeyAuthFilter.COMPANY_ID_ATTRIBUTE);
         List<String> fileProcessingIds = new ArrayList<>();
 
             for(MultipartFile file:files){
@@ -44,7 +47,8 @@ public class FileIngestionController {
                 try {
                     String fileProcessingId = coordinator.streamFileContents(
                             file.getOriginalFilename(),
-                            file.getInputStream()
+                            file.getInputStream(),
+                            companyId
                     );
                     fileProcessingIds.add(fileProcessingId);
                 } catch (Exception e) {

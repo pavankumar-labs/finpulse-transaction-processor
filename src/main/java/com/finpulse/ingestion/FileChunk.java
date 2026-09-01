@@ -14,5 +14,7 @@ public class FileChunk {
     private final String fileName;
 
     private final List<String> lines;
+
+    private final Long companyId;
     
 }

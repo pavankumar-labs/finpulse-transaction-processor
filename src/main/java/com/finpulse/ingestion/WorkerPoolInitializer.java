@@ -8,14 +8,20 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import com.finpulse.entity.ProcessingStatus;
-import com.finpulse.entity.Transaction;
+import java.util.stream.Collectors;
+
+import com.finpulse.entity.*;
+import com.finpulse.event.FileProcessingCompletedEvent;
+import com.finpulse.repository.RejectedTransactionRepository;
+import com.finpulse.repository.UploadedFileRepository;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ParameterizedPreparedStatementSetter;
 import org.springframework.stereotype.Component;
@@ -37,12 +43,16 @@ public class WorkerPoolInitializer {
     private final JdbcTemplate jdbcTemplate;
     private static final int DB_BATCH_SIZE = 500;
     private volatile boolean isRunning = true;
+    private final RejectedTransactionRepository rejectedTransactionRepository;
+    private final UploadedFileRepository uploadedFileRepository;
+    private final ApplicationEventPublisher eventPublisher;
+
 
     private static final String INSERT_TRANSACTION_SQL =
         "INSERT IGNORE INTO transactions " +
         "(transaction_id, sender_account, receiver_account, amount, " +
-        "transaction_type, transaction_time, status, file_name) " +
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        "transaction_type, transaction_time, status, file_name, company_id) " +
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     private static final List<DateTimeFormatter> FORMATTERS = List.of(
             DateTimeFormatter.ISO_LOCAL_DATE_TIME,
@@ -95,11 +105,17 @@ public class WorkerPoolInitializer {
 
         private void processChunk(FileChunk fileChunk){
             log.info(
-                    "Chunk processing started. fileProcessingId={}, fileName={}, rows={}",
+                    "Chunk processing started. fileProcessingId={}, fileName={}, rows={}, companyID={}",
                     fileChunk.getFileProcessingId(),
                     fileChunk.getFileName(),
-                    fileChunk.getLines().size()
+                    fileChunk.getLines().size(),
+                    fileChunk.getCompanyId()
             );
+
+            Map<String, List<RejectedTransaction>> pendingRejections=
+                    rejectedTransactionRepository.findByCompanyIdAndStatus(fileChunk.getCompanyId(), RejectionStatus.PENDING)
+                            .stream()
+                            .collect(Collectors.groupingBy(RejectedTransaction::getTransactionId));
 
             List<Transaction> batch= new ArrayList<>();
 
@@ -108,8 +124,17 @@ public class WorkerPoolInitializer {
                 try{
                     if(line==null || line.isBlank())continue;
                     Transaction transaction=validateAndBuildTransaction
-                            (fileChunk.getFileProcessingId(),line,fileChunk.getFileName());
+                            (fileChunk.getFileProcessingId(),line,fileChunk.getFileName(),fileChunk.getCompanyId());
                    if(transaction!=null){
+                       List<RejectedTransaction> matches=pendingRejections.get(transaction.getTransactionId());
+                       if(matches!=null){
+                           for (RejectedTransaction matched: matches){
+                               matched.setStatus(RejectionStatus.RESOLVED);
+                               matched.setResolvedAt(LocalDateTime.now());
+                           }
+                           rejectedTransactionRepository.saveAll(matches);
+                           pendingRejections.remove(transaction.getTransactionId());
+                       }
                         batch.add(transaction);
                    }
                 if (batch.size()==DB_BATCH_SIZE) {
@@ -137,12 +162,26 @@ public class WorkerPoolInitializer {
             finally{
                 batch.clear();
             }
+
             log.info(
                     "Chunk processing completed. fileProcessingId={}, fileName={}, rows={}",
                     fileChunk.getFileProcessingId(),
                     fileChunk.getFileName(),
                     fileChunk.getLines().size()
             );
+
+            uploadedFileRepository.incrementCompletedChunks(fileChunk.getFileProcessingId());
+            UploadedFile uploadedFile=uploadedFileRepository.findByFileProcessingId(fileChunk.getFileProcessingId())
+                    .orElseThrow(()-> new IllegalStateException("UploadedFile record missing for fileProcessingId=" + fileChunk.getFileProcessingId()));
+            if(uploadedFile.getCompletedChunks()>= uploadedFile.getTotalChunks()){
+                log.info("File fully processed. fileProcessingId={}, companyId={}, totalChunks={}",
+                        fileChunk.getFileProcessingId(), fileChunk.getCompanyId(), uploadedFile.getTotalChunks());
+            }
+
+            eventPublisher.publishEvent(new FileProcessingCompletedEvent(
+                    fileChunk.getFileProcessingId(), fileChunk.getCompanyId()
+            ));
+
         }
 
         private void flushBatchToDatabase(List<Transaction> batch){
@@ -164,6 +203,7 @@ public class WorkerPoolInitializer {
                         ps.setTimestamp(6,Timestamp.valueOf(t.getTransactionTime()) );
                         ps.setString(7, t.getStatus().name());
                         ps.setString(8, t.getFileName());
+                        ps.setLong(9, t.getCompanyId());
                     }
                 });
             });
@@ -175,7 +215,9 @@ public class WorkerPoolInitializer {
 
         }
 
-        private Transaction validateAndBuildTransaction(String fileProcessingId,String line,String fileName){
+        private Transaction validateAndBuildTransaction(String fileProcessingId,String line,String fileName, Long companyId){
+
+
 
             String[] fields = line.split(",");
             BigDecimal amount;
@@ -188,6 +230,7 @@ public class WorkerPoolInitializer {
                         "FIELD_SIZE_INVALID",
                         line
                 );
+                saveRejectedTransaction(fileProcessingId,fileName,companyId,line,"FIELD_SIZE_INVALID",null);
                 return null;      
             }
             if(fields[0].isBlank() || fields[1].isBlank() || fields[2].isBlank()
@@ -201,6 +244,7 @@ public class WorkerPoolInitializer {
                     "INSUFFICIENT_FIELDS",
                     fields[0]
             );
+            saveRejectedTransaction(fileProcessingId, fileName, companyId, line, "INSUFFICIENT_FIELDS", fields[0]);
             return null;
             }
             try{
@@ -217,6 +261,7 @@ public class WorkerPoolInitializer {
                         fields[0]
 
                 );
+                saveRejectedTransaction(fileProcessingId, fileName, companyId, line, "INVALID_AMOUNT", fields[0]);
                 return null;
             }
               if (amount.compareTo(BigDecimal.ZERO) <= 0) {
@@ -229,6 +274,7 @@ public class WorkerPoolInitializer {
                           fields[0],
                           fields[3]
                   );
+                  saveRejectedTransaction(fileProcessingId, fileName, companyId, line, "NON_POSITIVE_AMOUNT", fields[0]);
                 return null;
             }
             LocalDateTime transactionTime = null;
@@ -245,6 +291,7 @@ public class WorkerPoolInitializer {
                                 "fileProcessingId={}, fileName={}, reason={}, transactionId={}",
                         fileProcessingId, fileName, "INVALID_DATE", fields[0]
                 );
+                saveRejectedTransaction(fileProcessingId, fileName, companyId, line, "INVALID_DATE", fields[0]);
                 return null;
             }
 
@@ -257,8 +304,23 @@ public class WorkerPoolInitializer {
                                     .transactionTime(transactionTime)
                                     .status(ProcessingStatus.PROCESSING)
                                     .fileName(fileName)
+                                    .companyId(companyId)
                                     .build();
 
+        }
+
+        private void saveRejectedTransaction
+                (String fileProcessingId,String fileName, Long companyId,
+                 String rawLine, String reason, String transactionId){
+            RejectedTransaction rejected=RejectedTransaction.builder()
+                    .fileProcessingId(fileProcessingId)
+                    .fileName(fileName)
+                    .companyId(companyId)
+                    .transactionId(transactionId)
+                    .rawLine(rawLine)
+                    .reason(reason)
+                    .build();
+            rejectedTransactionRepository.save(rejected);
         }
     }
 }
