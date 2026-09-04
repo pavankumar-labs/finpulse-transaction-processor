@@ -32,23 +32,27 @@ public class Transaction {
     @Column(nullable = false,precision = 15,scale = 2)
     private BigDecimal amount;
 
-    @Column(nullable = false,name = "transaction_type")
-    private String transactionType;
-
     @Column(name = "transaction_time",nullable = false)
     private LocalDateTime transactionTime;
 
-    @Enumerated(value = EnumType.STRING)
-    @Column(nullable = false)
-    private ProcessingStatus status;
-
     @Column(name = "file_name")
     private String fileName;
+
+    @Column(name = "file_processing_id", nullable = false)
+    private String fileProcessingId;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
     @Column(name = "company_id", nullable = false)
     private Long companyId;
+
+    @Enumerated(value = EnumType.STRING)
+    @Column(name = "sender_account_type", nullable = false)
+    private AccountType senderAccountType;
+
+    @Enumerated(value = EnumType.STRING)
+    @Column(name = "receiver_account_type", nullable = false)
+    private AccountType receiverAccountType;
 
 }

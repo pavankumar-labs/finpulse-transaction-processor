@@ -17,11 +17,12 @@ create table if not exists transactions(
     sender_account varchar(50) not null,
     receiver_account varchar(50) not null,
     amount decimal(15,2) not null,
-    transaction_type varchar(20) not null,
+    file_processing_id varchar(100) not null,
     transaction_time datetime not null,
-    status varchar(20) not null,
     file_name varchar(256) not null,
     created_at timestamp default current_timestamp,
+    sender_account_type varchar(20) not null,
+    receiver_account_type varchar(20) not null,
     foreign key (company_id) references companies(id)
 
 );
@@ -82,3 +83,4 @@ create index if not exists idx_rejected_company_txnid on rejected_transactions(c
 
 create index if not exists idx_transaction_time_amount on transactions(transaction_time,amount);
 create index if not exists idx_transaction_company on transactions(company_id);
+create index if not exists idx_transaction_fileprocessingid on transactions(file_processing_id);

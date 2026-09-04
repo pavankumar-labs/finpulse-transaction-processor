@@ -62,10 +62,11 @@ management:
     prometheus:
       enabled: true
 
+
 fraud:
-  high-count-threshold: 10
-  high-receiver-threshold: 5
-  repeat-transfer-threshold: 5
-  high-amount-threshold: 150000
-  high-amount-count-threshold: 5
+  amount-outlier:
+    zscore-threshold: 4
+
+  dormant-reactivation:
+    dormancy-days: 60
 
