@@ -14,7 +14,8 @@ import java.util.List;
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
 
 
-    List<Transaction> findByFileName(String fileName);
+    List<Transaction> findByFileProcessingId(String fileName);
+
     boolean existsByTransactionId(String transactionId);
 
     @Query("""
