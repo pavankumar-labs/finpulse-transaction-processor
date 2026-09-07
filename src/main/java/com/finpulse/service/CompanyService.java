@@ -2,15 +2,11 @@ package com.finpulse.service;
 
 import com.finpulse.dto.CompanyRegistrationRequestDTO;
 import com.finpulse.dto.PendingCompanyDTO;
-import com.finpulse.entity.Company;
-import com.finpulse.entity.CompanyDecision;
-import com.finpulse.entity.CompanyStatus;
-import com.finpulse.entity.DecisionType;
+import com.finpulse.entity.*;
 import com.finpulse.exception.CompanyNotFoundException;
 import com.finpulse.exception.InvalidCompanyStateException;
 import com.finpulse.repository.CompanyDecisionRepository;
 import com.finpulse.repository.CompanyRepository;
-import com.finpulse.security.ApiKeyGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,10 +22,12 @@ public class CompanyService {
     private final CompanyDecisionRepository decisionRepository;
     private  final EmailService emailService;
 
+
     public void register(CompanyRegistrationRequestDTO requestDTO){
         Company company= Company.builder()
                 .companyCode(requestDTO.getCompanyCode())
                 .companyName(requestDTO.getCompanyName())
+                .contactEmail(requestDTO.getContactEmail())
                 .companyUrl(requestDTO.getCompanyUrl())
                 .companyStatus(CompanyStatus.PENDING)
                 .createdAt(LocalDateTime.now())
@@ -51,30 +49,8 @@ public class CompanyService {
                 .toList();
     }
 
-    public void approve(Long companyId){
-        Company company=companyRepository.findById(companyId)
-                .orElseThrow(()->new CompanyNotFoundException("no company found with  id"+companyId));
-        if(company.getCompanyStatus()!=CompanyStatus.PENDING){
-            throw new InvalidCompanyStateException(
-                    "Company " + companyId + " is not in PENDING status. Current status: " + company.getCompanyStatus());
-        }
 
-        String rawKey= ApiKeyGenerator.generateRawKey();
-        company.setApiHashCode(ApiKeyGenerator.hash(rawKey));
-        company.setCompanyStatus(CompanyStatus.ACTIVE);
-        companyRepository.save(company);
-        emailService.sendApprovalMail(company.getContactEmail(), company.getCompanyName(),
-                company.getCompanyCode(), rawKey);
-
-        decisionRepository.save(CompanyDecision.builder()
-                .companyId(companyId)
-                .adminId()
-                .decision(DecisionType.APPROVED)
-                .decidedAt(LocalDateTime.now())
-                .build());
-    }
-
-    public void reject(Long companyId,String reason){
+    public void reject(Long companyId,String reason, Long rejectingAdminId){
         if (reason == null || reason.isBlank()) {
             throw new InvalidCompanyStateException("A rejection reason is required.");
         }
@@ -93,7 +69,7 @@ public class CompanyService {
 
         decisionRepository.save(CompanyDecision.builder()
                 .companyId(companyId)
-                .adminId()
+                .adminId(rejectingAdminId)
                 .reason(reason)
                 .decision(DecisionType.REJECTED)
                 .decidedAt(LocalDateTime.now())
