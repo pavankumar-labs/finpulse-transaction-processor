@@ -8,17 +8,15 @@ import com.finpulse.repository.RejectedTransactionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 
-@Component
 @RequiredArgsConstructor
 public class FileProcessedNotificationListener {
 
     private final RejectedTransactionRepository rejectedTransactionRepository;
     private final NotificationRepository notificationRepository;
 
-    @Async("notificationExecutor")
+    @Async
     @EventListener
     public void onFileProcessingCompleted(FileProcessingCompletedEvent event){
 
