@@ -2,7 +2,6 @@ package com.finpulse.repository;
 
 import com.finpulse.dto.*;
 import com.finpulse.entity.Transaction;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
