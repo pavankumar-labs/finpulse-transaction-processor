@@ -13,7 +13,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
 import com.finpulse.entity.*;
 import com.finpulse.event.FileProcessingCompletedEvent;
 import com.finpulse.repository.RejectedTransactionRepository;
@@ -51,8 +50,8 @@ public class WorkerPoolInitializer {
     private static final String INSERT_TRANSACTION_SQL =
         "INSERT IGNORE INTO transactions " +
         "(transaction_id, sender_account, receiver_account, amount, " +
-        "transaction_type, transaction_time, status, file_name, company_id) " +
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        "transaction_time, file_name, company_id, file_processing_id, sender_account_type, receiver_account_type) " +
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     private static final List<DateTimeFormatter> FORMATTERS = List.of(
             DateTimeFormatter.ISO_LOCAL_DATE_TIME,
@@ -199,11 +198,12 @@ public class WorkerPoolInitializer {
                         ps.setString(2, t.getSenderAccount());
                         ps.setString(3, t.getReceiverAccount());
                         ps.setBigDecimal(4, t.getAmount());
-                        ps.setString(5, t.getTransactionType());
-                        ps.setTimestamp(6,Timestamp.valueOf(t.getTransactionTime()) );
-                        ps.setString(7, t.getStatus().name());
-                        ps.setString(8, t.getFileName());
-                        ps.setLong(9, t.getCompanyId());
+                        ps.setTimestamp(5,Timestamp.valueOf(t.getTransactionTime()) );
+                        ps.setString(6, t.getFileName());
+                        ps.setLong(7, t.getCompanyId());
+                        ps.setString(8,t.getFileProcessingId());
+                        ps.setString(9, t.getSenderAccountType().name());
+                        ps.setString(10, t.getReceiverAccountType().name());
                     }
                 });
             });
@@ -219,9 +219,9 @@ public class WorkerPoolInitializer {
 
 
 
-            String[] fields = line.split(",");
+            String[] fields = line.split(",",-1);
             BigDecimal amount;
-            if (fields.length!=6) {
+            if (fields.length!=7) {
                 log.warn(
                         "Transaction validation failed. " +
                                 "fileProcessingId={}, fileName={}, reason={}, row={}",
@@ -234,7 +234,7 @@ public class WorkerPoolInitializer {
                 return null;      
             }
             if(fields[0].isBlank() || fields[1].isBlank() || fields[2].isBlank()
-            || fields[3].isBlank() || fields[4].isBlank()  ||  fields[5].isBlank()){
+            || fields[3].isBlank() || fields[4].isBlank()){
 
             log.warn(
                     "Transaction validation failed. " +
@@ -280,7 +280,7 @@ public class WorkerPoolInitializer {
             LocalDateTime transactionTime = null;
             for (DateTimeFormatter formatter : FORMATTERS) {
                 try {
-                    transactionTime = LocalDateTime.parse(fields[5].trim(), formatter);
+                    transactionTime = LocalDateTime.parse(fields[4].trim(), formatter);
                     break;
                 } catch (Exception ignored) {
                 }
@@ -295,16 +295,20 @@ public class WorkerPoolInitializer {
                 return null;
             }
 
+            AccountType senderAccountType = parseAccountType(fields[5]);
+            AccountType receiverAccountType = parseAccountType(fields[6]);
+
             return Transaction.builder()
                                     .transactionId(fields[0])
                                     .senderAccount(fields[1])
                                     .receiverAccount(fields[2])
                                     .amount(amount)
-                                    .transactionType(fields[4])
                                     .transactionTime(transactionTime)
-                                    .status(ProcessingStatus.PROCESSING)
                                     .fileName(fileName)
                                     .companyId(companyId)
+                                    .fileProcessingId(fileProcessingId)
+                                    .senderAccountType(senderAccountType)
+                                    .receiverAccountType(receiverAccountType)
                                     .build();
 
         }
@@ -321,6 +325,13 @@ public class WorkerPoolInitializer {
                     .reason(reason)
                     .build();
             rejectedTransactionRepository.save(rejected);
+        }
+
+        private AccountType parseAccountType(String raw){
+            if(raw.isBlank()){
+                return AccountType.PERSONAL;
+            }
+            return raw.trim().equalsIgnoreCase("business")?AccountType.BUSINESS:AccountType.PERSONAL;
         }
     }
 }
