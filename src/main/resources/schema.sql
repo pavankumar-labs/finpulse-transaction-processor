@@ -17,11 +17,12 @@ create table if not exists transactions(
     sender_account varchar(50) not null,
     receiver_account varchar(50) not null,
     amount decimal(15,2) not null,
-    transaction_type varchar(20) not null,
+    file_processing_id varchar(100) not null,
     transaction_time datetime not null,
-    status varchar(20) not null,
     file_name varchar(256) not null,
     created_at timestamp default current_timestamp,
+    sender_account_type varchar(20) not null,
+    receiver_account_type varchar(20) not null,
     foreign key (company_id) references companies(id)
 
 );
@@ -73,6 +74,22 @@ create table if not exists notifications(
     foreign key (company_id) references companies(id)
     );
 
+create table if not exists fraud_findings(
+    id bigint auto_increment primary key,
+    company_id bigint not null,
+    file_processing_id varchar(100) not null,
+    account_number varchar(50) not null,
+    risk_level varchar(20) not null,
+    triggered_rule_codes varchar(500) not null,
+    reason varchar(2000) not null,
+    created_at timestamp not null,
+    foreign key (company_id) references companies(id)
+    );
+
+
+create index if not exists idx_fraudfinding_company_file on fraud_findings(company_id, file_processing_id);
+create index if not exists idx_fraudfinding_risklevel on fraud_findings(risk_level);
+
 create index if not exists idx_notification_company_viewed on notifications(company_id, viewed);
 
 create index if not exists idx_uploaded_company_hash on uploaded_files(company_id, file_hash);
@@ -82,3 +99,4 @@ create index if not exists idx_rejected_company_txnid on rejected_transactions(c
 
 create index if not exists idx_transaction_time_amount on transactions(transaction_time,amount);
 create index if not exists idx_transaction_company on transactions(company_id);
+create index if not exists idx_transaction_fileprocessingid on transactions(file_processing_id);
