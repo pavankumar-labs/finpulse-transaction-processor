@@ -73,6 +73,41 @@ create table if not exists notifications(
     foreign key (company_id) references companies(id)
     );
 
+create table if not exists company_users(
+    id bigint auto_increment primary key,
+    company_id bigint not null,
+    email varchar(255) not null unique,
+    password_hash varchar(255) not null,
+    role varchar(20) not null,
+    must_change_password boolean not null default true,
+    credential_expires_at timestamp null,
+    created_at timestamp default current_timestamp,
+    foreign key (company_id) references companies(id)
+    );
+
+
+create table if not exists company_password_reset_tokens(
+    id bigint auto_increment primary key,
+    company_user_id bigint not null,
+    token_hash varchar(255) not null unique,
+    used boolean not null default false,
+    expires_at timestamp not null,
+    created_at timestamp default current_timestamp,
+    foreign key (company_user_id) references company_users(id)
+    );
+create table if not exists refresh_tokens(
+    id bigint auto_increment primary key,
+    subject_type varchar(20) not null,
+    subject_id bigint not null,
+    token_hash varchar(255) not null unique,
+    expires_at timestamp not null,
+    revoked boolean not null default false,
+    created_at timestamp default current_timestamp
+    );
+
+create index if not exists idx_refreshtoken_tokenhash on refresh_tokens(token_hash);
+create index if not exists idx_companyuser_company on company_users(company_id);
+create index if not exists idx_resettoken_tokenhash on company_password_reset_tokens(token_hash);
 create index if not exists idx_notification_company_viewed on notifications(company_id, viewed);
 
 create index if not exists idx_uploaded_company_hash on uploaded_files(company_id, file_hash);

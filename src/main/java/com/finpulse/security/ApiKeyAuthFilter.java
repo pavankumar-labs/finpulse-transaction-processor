@@ -45,6 +45,7 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
         Company company=companyOpt.get();
         if(company.getCompanyStatus()!= CompanyStatus.PENDING){
             response.sendError(HttpServletResponse.SC_FORBIDDEN,"Company is not active");
+            return;
         }
 
         request.setAttribute(COMPANY_ID_ATTRIBUTE,company.getId());

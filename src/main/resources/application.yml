@@ -69,3 +69,7 @@ fraud:
   high-amount-threshold: 150000
   high-amount-count-threshold: 5
 
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-expiry-minutes: 30
+  refresh-token-expiry-days: 3
