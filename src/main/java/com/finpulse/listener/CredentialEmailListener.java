@@ -22,8 +22,7 @@ public class CredentialEmailListener {
         try {
             emailService.sendCredentialEmail(event.getEmail(), event.getRawPassword());
         } catch (Exception e) {
-            log.error("Credential email failed to send. email={}, type={}",
-                    event.getEmail(), e);
+            log.error("Credential email failed to send. email={}", event.getEmail(), e);
         }
 
     }

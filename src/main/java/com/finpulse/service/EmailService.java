@@ -5,14 +5,8 @@ import com.finpulse.service.email.EmailTemplates;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.MailException;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-
-import java.math.BigDecimal;
-import java.util.Map;
 
 @Slf4j
 @Service
@@ -20,7 +14,10 @@ import java.util.Map;
 public class EmailService {
 
     private final BrevoEmailGateway brevoEmailGateway;
-    private final EmailTemplates emailTemplates;
+
+
+    @Value("${app.frontend-base-url}")
+    private String frontendBaseUrl;
 
     @Async
     public void sendRegistrationConfirmation(String email, String companyName, String companyCode) {
@@ -30,17 +27,30 @@ public class EmailService {
     }
 
     @Async
-    public void sendApprovalNotice(String email, String companyName, String companyCode, String rawApiKey) {
-        String subject = "FinPulse — You're Approved!";
-        String html = EmailTemplates.approvalNotice(companyName, companyCode, rawApiKey);
-        send(email, companyName, subject, html, "approval notice", companyCode);
+    public void sendApprovalMail(String email, String companyName, String companyCode, String rawApiKey, String rawOwnerPassword) {
+        String html = EmailTemplates.approvalNotice(companyName, companyCode, rawApiKey, rawOwnerPassword);
+        send(email, companyName, "FinPulse — You're Approved!", html, "approval notice", companyCode);
     }
+
 
     @Async
     public void sendRejectionNotice(String email, String companyName, String companyCode) {
         String subject = "FinPulse — Application Update";
         String html = EmailTemplates.rejectionNotice(companyName);
         send(email, companyName, subject, html, "rejection notice", companyCode);
+    }
+
+    @Async
+    public void sendCredentialEmail(String email, String rawPassword) {
+        String html = EmailTemplates.credentialIssued(email, rawPassword);
+        send(email, email, "FinPulse — Your Account Is Ready", html, "credential issued", "n/a");
+    }
+
+    @Async
+    public void sendPasswordResetLink(String email, String rawToken) {
+        String resetLink = frontendBaseUrl + "/reset-password?token=" + rawToken;
+        String html = EmailTemplates.passwordResetLink(resetLink);
+        send(email, email, "FinPulse — Reset Your Password", html, "password reset link", "n/a");
     }
 
     private void send(String email, String toName, String subject, String html, String emailType, String companyCode) {
