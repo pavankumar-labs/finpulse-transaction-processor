@@ -17,7 +17,6 @@ import com.finpulse.entity.*;
 import com.finpulse.event.FileProcessingCompletedEvent;
 import com.finpulse.repository.RejectedTransactionRepository;
 import com.finpulse.repository.UploadedFileRepository;
-import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import org.springframework.context.ApplicationEventPublisher;
@@ -67,10 +66,6 @@ public class WorkerPoolInitializer {
                 .description("Time taken to insert transaction batches")
                 .publishPercentiles(0.5, 0.95, 0.99)
                 .register(meterRegistry);
-        Gauge.builder("finpulse.active.threads",
-                        workerThreadPool,ThreadPoolExecutor::getActiveCount)
-                .description("Current active worker threads")
-                .register(meterRegistry);
         int poolSize=workerThreadPool.getCorePoolSize();
         for(int i=0; i<poolSize;i++){
             workerThreadPool.submit(new WorkerTask());
@@ -118,6 +113,7 @@ public class WorkerPoolInitializer {
 
             List<Transaction> batch= new ArrayList<>();
 
+            boolean chunkSucceeded = true;
             try{
                  for(String line:fileChunk.getLines()){
                 try{
@@ -137,11 +133,17 @@ public class WorkerPoolInitializer {
                         batch.add(transaction);
                    }
                 if (batch.size()==DB_BATCH_SIZE) {
-                    flushBatchToDatabase(batch);
-                    batch.clear();   
+                    try {
+                        flushBatchToDatabase(batch);
+                        batch.clear();
+                    } catch (Exception e) {
+                        chunkSucceeded = false;
+                        break;
+                    }
                 }
                 }
                 catch (Exception e) {
+                    chunkSucceeded = false;
                     log.error(
                             "Unexpected processing error. " +
                                     "fileProcessingId={}, fileName={}, row={}",
@@ -150,17 +152,30 @@ public class WorkerPoolInitializer {
                             line,
                             e
                     );
+                    break;
                 }
 
             }
-            if (!batch.isEmpty()) {
-                flushBatchToDatabase(batch);
+            if (chunkSucceeded && !batch.isEmpty()) {
+               try {
+                   flushBatchToDatabase(batch);
+               } catch (Exception e) {
+                   chunkSucceeded = false;
+                   log.error( "Failed to persist final transaction batch. " +
+                           "fileProcessingId={}, fileName={}, batchSize={}",
+                           fileChunk.getFileProcessingId(), fileChunk.getFileName(),
+                           batch.size(), e );
+               }
             }
 
             }
             finally{
                 batch.clear();
             }
+            if (!chunkSucceeded) { log.error( "Chunk processing failed. Chunk will not be marked completed. " +
+                    "fileProcessingId={}, fileName={}",
+                    fileChunk.getFileProcessingId(), fileChunk.getFileName() );
+                return; }
 
             log.info(
                     "Chunk processing completed. fileProcessingId={}, fileName={}, rows={}",
@@ -169,26 +184,28 @@ public class WorkerPoolInitializer {
                     fileChunk.getLines().size()
             );
 
-            uploadedFileRepository.incrementCompletedChunks(fileChunk.getFileProcessingId());
-            UploadedFile uploadedFile=uploadedFileRepository.findByFileProcessingId(fileChunk.getFileProcessingId())
-                    .orElseThrow(()-> new IllegalStateException("UploadedFile record missing for fileProcessingId=" + fileChunk.getFileProcessingId()));
-            if(uploadedFile.getCompletedChunks()>= uploadedFile.getTotalChunks()){
-                log.info("File fully processed. fileProcessingId={}, companyId={}, totalChunks={}",
-                        fileChunk.getFileProcessingId(), fileChunk.getCompanyId(), uploadedFile.getTotalChunks());
-            }
+            uploadedFileRepository.incrementCompletedChunks(
+                    fileChunk.getFileProcessingId()
+            );
 
-            eventPublisher.publishEvent(new FileProcessingCompletedEvent(
-                    fileChunk.getFileProcessingId(), fileChunk.getCompanyId()
-            ));
+            int eventClaimed =
+                    uploadedFileRepository.claimCompletionEvent(
+                            fileChunk.getFileProcessingId()
+                    );
+
+            if (eventClaimed == 1) {
+                eventPublisher.publishEvent(
+                        new FileProcessingCompletedEvent(
+                                fileChunk.getFileProcessingId(),
+                                fileChunk.getCompanyId()
+                        )
+                );
+            }
 
         }
 
         private void flushBatchToDatabase(List<Transaction> batch){
 
-            log.info(
-                    "Batch insert started. size={}",
-                    batch.size()
-            );
 
             batchInsertTimer.record(()->{
                 jdbcTemplate.batchUpdate(INSERT_TRANSACTION_SQL,batch,batch.size(),new ParameterizedPreparedStatementSetter<Transaction>() {
@@ -208,15 +225,9 @@ public class WorkerPoolInitializer {
                 });
             });
 
-            log.info(
-                    "Batch insert completed. size={}",
-                    batch.size()
-            );
-
         }
 
         private Transaction validateAndBuildTransaction(String fileProcessingId,String line,String fileName, Long companyId){
-
 
 
             String[] fields = line.split(",",-1);
@@ -322,6 +333,7 @@ public class WorkerPoolInitializer {
                     .companyId(companyId)
                     .transactionId(transactionId)
                     .rawLine(rawLine)
+                    .status(RejectionStatus.PENDING)
                     .reason(reason)
                     .build();
             rejectedTransactionRepository.save(rejected);

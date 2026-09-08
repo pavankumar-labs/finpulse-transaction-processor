@@ -8,6 +8,7 @@ import com.finpulse.service.CompanyOnboardingService;
 import com.finpulse.service.CompanyService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/admin/companies")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyAuthority('ADMIN_OWNER', 'ADMIN_MEMBER')")
 public class AdminCompanyController {
 
     private final CompanyService companyService;
