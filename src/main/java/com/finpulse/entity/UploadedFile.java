@@ -33,6 +33,9 @@ public class UploadedFile {
     @Column(name = "completed_chunks", nullable = false)
     private Integer completedChunks;
 
+    @Column(name = "completion_event_published", nullable = false)
+    private boolean completionEventPublished;
+
     @Column(name = "uploaded_at", nullable = false)
     private LocalDateTime uploadedAt;
 }

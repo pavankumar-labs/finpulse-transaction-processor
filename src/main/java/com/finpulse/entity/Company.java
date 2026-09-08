@@ -32,9 +32,6 @@ public class Company {
     @Column(name = "company_url")
     private String companyUrl;
 
-    @Column(name = "webhook_secret")
-    private String webhookSecret;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "company_status",nullable = false)
     private  CompanyStatus companyStatus;

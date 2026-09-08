@@ -11,15 +11,6 @@ groups:
           description: "Prometheus cannot reach FinPulse for more than 1 minute."
 
 
-      - alert: RedisDown
-        expr: redis_up == 0
-        for: 1m
-        labels:
-          severity: critical
-        annotations:
-          summary: "Redis Down"
-          description: "Redis exporter cannot reach Redis."
-
 
       - alert: JVMMemoryHigh
         expr: (

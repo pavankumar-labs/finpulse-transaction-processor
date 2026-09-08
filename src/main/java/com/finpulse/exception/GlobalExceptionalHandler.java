@@ -81,6 +81,63 @@ public class GlobalExceptionalHandler {
                 ));
     }
 
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ApiResponse<Void>> handleInvalidCredentials(
+            InvalidCredentialsException ex, HttpServletRequest request) {
+        log.warn("Invalid credentials. path={}", request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error(ex.getMessage(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(InvalidTokenException.class)
+    public ResponseEntity<ApiResponse<Void>> handleInvalidToken(
+            InvalidTokenException ex, HttpServletRequest request) {
+        log.warn("Invalid or expired token. path={}", request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error(ex.getMessage(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(CredentialExpiredException.class)
+    public ResponseEntity<ApiResponse<Void>> handleCredentialExpired(
+            CredentialExpiredException ex, HttpServletRequest request) {
+        log.warn("Credential expired. path={}", request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error(ex.getMessage(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAccessDenied(
+            AccessDeniedException ex, HttpServletRequest request) {
+        log.warn("Access denied. path={}", request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error(ex.getMessage(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler({AdminNotFoundException.class, CompanyNotFoundException.class,
+            FraudFindingNotFoundException.class})
+    public ResponseEntity<ApiResponse<Void>> handleNotFound(
+            RuntimeException ex, HttpServletRequest request) {
+        log.warn("Resource not found. path={}, reason={}", request.getRequestURI(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(ex.getMessage(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(InvalidCompanyStateException.class)
+    public ResponseEntity<ApiResponse<Void>> handleInvalidCompanyState(
+            InvalidCompanyStateException ex, HttpServletRequest request) {
+        log.warn("Invalid company state transition. path={}, reason={}", request.getRequestURI(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(ex.getMessage(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIllegalArgument(
+            IllegalArgumentException ex, HttpServletRequest request) {
+        log.warn("Invalid request. path={}, reason={}", request.getRequestURI(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(ex.getMessage(), request.getRequestURI()));
+    }
+
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneral(

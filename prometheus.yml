@@ -7,8 +7,6 @@ scrape_configs:
     static_configs:
       - targets: ['finpulse-app:8080']
 
-  - job_name: 'redis'
-    static_configs:
-      - targets: ['redis-exporter:9121']
+
 
 

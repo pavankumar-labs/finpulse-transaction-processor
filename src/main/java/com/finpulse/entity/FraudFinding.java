@@ -16,7 +16,6 @@ import java.time.LocalDateTime;
 @Builder
 public class FraudFinding {
 
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -40,8 +39,13 @@ public class FraudFinding {
     @Column(name = "reason", nullable = false, length = 2000)
     private String reason;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private FraudStatus status;
+
+    @Column(name = "resolved_at")
+    private LocalDateTime resolvedAt;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
-
-
 }

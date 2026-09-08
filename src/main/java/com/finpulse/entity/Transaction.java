@@ -41,9 +41,6 @@ public class Transaction {
     @Column(name = "file_processing_id", nullable = false)
     private String fileProcessingId;
 
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
-
     @Column(name = "company_id", nullable = false)
     private Long companyId;
 
