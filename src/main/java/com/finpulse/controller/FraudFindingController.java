@@ -7,37 +7,36 @@ import com.finpulse.entity.FraudFinding;
 import com.finpulse.entity.FraudStatus;
 import com.finpulse.exception.FraudFindingNotFoundException;
 import com.finpulse.repository.FraudFindingRepository;
-import com.finpulse.security.ApiKeyAuthFilter;
-import jakarta.servlet.http.HttpServletRequest;
+import com.finpulse.security.FinPulseUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-
 import java.time.LocalDateTime;
 
 
 @RestController
 @RequestMapping("/api/v1/fraud-findings")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyAuthority('COMPANY_OWNER', 'COMPANY_MEMBER')")
 public class FraudFindingController {
 
     private final FraudFindingRepository fraudFindingRepository;
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<?>>> getFindings(
-            HttpServletRequest request,
+            @AuthenticationPrincipal FinPulseUserDetails principal,
             @RequestParam(defaultValue = "PENDING") FraudStatus status,
             @RequestParam(required = false) String fileProcessingId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "5") int size
     ){
-
-        Long companyId = (Long) request.getAttribute(ApiKeyAuthFilter.COMPANY_ID_ATTRIBUTE);
-
+        Long companyId = principal.getCompanyId();
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
         Page<FraudFinding> findings = (fileProcessingId != null)
@@ -76,9 +75,9 @@ public class FraudFindingController {
 
     @PatchMapping("/{id}/resolve")
     public ResponseEntity<ApiResponse<Void>> resolveFinding(
-            HttpServletRequest request, @PathVariable Long id
+            @AuthenticationPrincipal FinPulseUserDetails principal, @PathVariable Long id
     ){
-        Long companyId = (Long) request.getAttribute(ApiKeyAuthFilter.COMPANY_ID_ATTRIBUTE);
+        Long companyId = principal.getCompanyId();
 
         FraudFinding finding = fraudFindingRepository.findById(id)
                 .filter(f -> f.getCompanyId().equals(companyId))
@@ -89,7 +88,6 @@ public class FraudFindingController {
         fraudFindingRepository.save(finding);
 
         return ResponseEntity.ok(ApiResponse.success(null, "Finding marked as resolved."));
-
 
     }
 }

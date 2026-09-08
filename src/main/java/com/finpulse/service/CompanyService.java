@@ -65,7 +65,7 @@ public class CompanyService {
 
         company.setCompanyStatus(CompanyStatus.REJECTED);
         companyRepository.save(company);
-        emailService.sendRejectionEmail(company.getContactEmail(), company.getCompanyName());
+        emailService.sendRejectionNotice(company.getContactEmail(), company.getCompanyName(), company.getCompanyCode());
 
         decisionRepository.save(CompanyDecision.builder()
                 .companyId(companyId)

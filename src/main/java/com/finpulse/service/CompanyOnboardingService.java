@@ -1,6 +1,5 @@
 package com.finpulse.service;
 
-
 import com.finpulse.config.PasswordEncoderConfig;
 import com.finpulse.entity.*;
 import com.finpulse.event.CompanyApprovedEvent;
@@ -34,6 +33,7 @@ public class CompanyOnboardingService {
 
     private static final int CREDENTIAL_EXPIRY_DAYS = 7;
 
+    @Transactional
     public void approve(Long companyId,Long approvingAdminId){
 
         Company company=companyRepository.findById(companyId)

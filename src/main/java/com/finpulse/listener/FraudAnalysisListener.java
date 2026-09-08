@@ -1,10 +1,7 @@
 package com.finpulse.listener;
 
 
-import com.finpulse.entity.FraudFinding;
-import com.finpulse.entity.Notification;
-import com.finpulse.entity.RiskLevel;
-import com.finpulse.entity.Transaction;
+import com.finpulse.entity.*;
 import com.finpulse.event.FileProcessingCompletedEvent;
 import com.finpulse.fraud.context.AnalysisContext;
 import com.finpulse.fraud.model.RuleResult;
@@ -195,6 +192,7 @@ public class FraudAnalysisListener {
                 .fileProcessingId(fileProcessingId)
                 .accountNumber(account)
                 .riskLevel(riskLevel)
+                .status(FraudStatus.PENDING)
                 .triggeredRuleCodes(ruleCodes)
                 .reason(reason)
                 .createdAt(LocalDateTime.now())
