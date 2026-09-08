@@ -10,6 +10,7 @@ import com.finpulse.service.AdminAuthSelfServiceService;
 import com.finpulse.service.AdminAuthService;
 import com.finpulse.service.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -59,6 +60,7 @@ public class AdminAuthController {
     }
 
 
+    @PreAuthorize("hasAuthority('ADMIN_OWNER')")
     @PostMapping("/api/admin/register")
     public ApiResponse<Void> registerAdmin(@AuthenticationPrincipal FinPulseUserDetails principal
             , @RequestBody RegisterAdminRequestDTO dto) {
@@ -67,12 +69,14 @@ public class AdminAuthController {
         return ApiResponse.success(null, "Admin created. Credentials sent by email.");
     }
 
+    @PreAuthorize("hasAuthority('ADMIN_OWNER')")
     @PostMapping("/api/admin/{id}/regenerate")
     public ApiResponse<Void> regenerate(@AuthenticationPrincipal FinPulseUserDetails principal,@PathVariable Long id) {
         adminAuthService.regenerateCredentials(roleOf(principal), id);
         return ApiResponse.success(null, "Credentials regenerated and sent by email.");
     }
 
+    @PreAuthorize("hasAnyAuthority('ADMIN_OWNER', 'ADMIN_MEMBER')")
     @PostMapping("/api/admin/change-password")
     public ApiResponse<Void> changePassword(@AuthenticationPrincipal FinPulseUserDetails principal, @RequestBody ChangePasswordRequestDTO dto) {
 

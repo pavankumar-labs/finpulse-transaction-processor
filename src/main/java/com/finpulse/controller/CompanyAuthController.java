@@ -11,6 +11,7 @@ import com.finpulse.service.CompanyOnboardingService;
 import com.finpulse.service.CompanyUserManagementService;
 import com.finpulse.service.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,7 +26,7 @@ public class CompanyAuthController {
     private final CompanyUserManagementService companyUserManagementService;
     private final CompanyAuthSelfServiceService companyAuthSelfServiceService;
     private final JwtUtil jwtUtil;
-    private RefreshTokenService refreshTokenService;
+    private final RefreshTokenService refreshTokenService;
 
     @PostMapping("/api/auth/company/login")
     public ApiResponse<AuthResponseDTO> login(@RequestBody LoginRequestDTO request) {
@@ -59,6 +60,7 @@ public class CompanyAuthController {
         return ApiResponse.success(null, "Logged out.");
     }
 
+    @PreAuthorize("hasAuthority('COMPANY_OWNER')")
     @PostMapping("/api/company/users")
     public ApiResponse<Void> createTeammate(@AuthenticationPrincipal FinPulseUserDetails principal,
                                             @RequestBody CreateUserRequestDTO dto) {
@@ -66,6 +68,7 @@ public class CompanyAuthController {
         return ApiResponse.success(null, "Teammate created. Credentials sent by email.");
     }
 
+    @PreAuthorize("hasAuthority('COMPANY_OWNER')")
     @PostMapping("/api/company/users/{id}/regenerate")
     public ApiResponse<Void> regenerateTeammate(@AuthenticationPrincipal FinPulseUserDetails principal,
                                                 @PathVariable Long id) {
@@ -73,7 +76,7 @@ public class CompanyAuthController {
         return ApiResponse.success(null, "Credentials regenerated and sent by email.");
     }
 
-
+    @PreAuthorize("hasAnyAuthority('COMPANY_OWNER', 'COMPANY_MEMBER')")
     @PostMapping("/api/company/users/me/password")
     public ApiResponse<Void> changePassword(@AuthenticationPrincipal FinPulseUserDetails principal,
                                             @RequestBody ChangePasswordRequestDTO dto) {

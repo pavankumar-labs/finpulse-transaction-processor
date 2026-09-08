@@ -1,6 +1,5 @@
 package com.finpulse.service;
 
-
 import com.finpulse.config.PasswordEncoderConfig;
 import com.finpulse.entity.CompanyPasswordResetToken;
 import com.finpulse.entity.CompanyUser;
@@ -46,7 +45,7 @@ public class CompanyAuthSelfServiceService {
     public void initiatePasswordReset(String email) {
         Optional<CompanyUser> user = companyUserRepository.findByEmail(email);
         if (user.isEmpty()) {
-            return; // identical outcome either way — no enumeration
+            return;
         }
 
         String rawToken = UUID.randomUUID().toString();

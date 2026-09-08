@@ -6,7 +6,6 @@ import org.springframework.stereotype.Component;
 import io.jsonwebtoken.security.Keys;
 import javax.crypto.SecretKey;
 import io.jsonwebtoken.*;
-
 import java.util.Date;
 
 
