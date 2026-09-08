@@ -11,4 +11,5 @@ public class PasswordResetRequestedEvent {
     public PasswordResetRequestedEvent(String email, String rawToken) {
         this.email = email;
         this.rawToken = rawToken;
+    }
 }
