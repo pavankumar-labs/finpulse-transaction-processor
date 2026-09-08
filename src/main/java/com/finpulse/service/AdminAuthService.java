@@ -20,7 +20,7 @@ public class AdminAuthService {
 
     private static final int CREDENTIAL_EXPIRY_DAYS = 7;
 
-    private CredentialGenerator credentialGenerator;
+    private final CredentialGenerator credentialGenerator;
     private final AdminRepository adminRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final CredentialPolicy credentialPolicy;

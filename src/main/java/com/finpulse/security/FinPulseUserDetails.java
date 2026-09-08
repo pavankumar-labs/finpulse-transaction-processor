@@ -4,7 +4,6 @@ import com.finpulse.entity.SubjectType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.GrantedAuthority;
-
 import java.util.Collection;
 import java.util.List;
 
@@ -68,7 +67,11 @@ public class FinPulseUserDetails implements UserDetails{
 
     @Override
     public boolean isCredentialsNonExpired() {
-        return !mustChangePassword;
+        return true;
+    }
+
+    public boolean isMustChangePassword() {
+        return mustChangePassword;
     }
 
     @Override

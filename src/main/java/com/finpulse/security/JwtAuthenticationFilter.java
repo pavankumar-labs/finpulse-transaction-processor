@@ -14,7 +14,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-
 import java.io.IOException;
 
 @Component
@@ -30,6 +29,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException{
 
         String header = request.getHeader("Authorization");
+
         if (header == null || !header.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
@@ -41,11 +41,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             Long subjectId = Long.valueOf(claims.getSubject());
             SubjectType subjectType = SubjectType.valueOf(claims.get("type", String.class));
 
-            FinPulseUserDetails userDetails = userDetailsService.loadBySubject(subjectId, subjectType);
+            FinPulseUserDetails userDetails =
+                    userDetailsService.loadBySubject(subjectId, subjectType);
 
             if (!userDetails.isCredentialsNonExpired()) {
                 entryPoint.commence(request, response,
                         new CredentialsExpiredException("Password must be changed before continuing."));
+                return;
+            }
+            if (userDetails.isMustChangePassword()
+                    && !isPasswordChangeRequest(request)) {
+
+                entryPoint.commence(
+                        request,
+                        response,
+                        new CredentialsExpiredException(
+                                "Password must be changed before continuing."
+                        )
+                );
+
                 return;
             }
 
@@ -61,6 +75,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private boolean isPasswordChangeRequest(
+            HttpServletRequest request
+    ) {
+
+        if (!"POST".equalsIgnoreCase(request.getMethod())) {
+            return false;
+        }
+
+        String requestUri = request.getRequestURI();
+
+        return "/api/admin/change-password".equals(requestUri)
+                || "/api/company/users/me/password".equals(requestUri);
     }
     }
 
