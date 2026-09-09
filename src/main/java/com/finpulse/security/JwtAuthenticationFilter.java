@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.CredentialsExpiredException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
@@ -68,6 +69,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
             SecurityContextHolder.getContext().setAuthentication(authToken);
+        }catch (AuthenticationException e) {
+
+            entryPoint.commence(request, response, e);
+            return;
         }
         catch (JwtException | IllegalArgumentException e) {
             entryPoint.commence(request, response, new org.springframework.security.core.AuthenticationException(e.getMessage()) {});

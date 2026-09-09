@@ -1,11 +1,11 @@
 package com.finpulse.security;
 
-import com.finpulse.entity.Admin;
-import com.finpulse.entity.CompanyUser;
-import com.finpulse.entity.SubjectType;
+import com.finpulse.entity.*;
 import com.finpulse.repository.AdminRepository;
+import com.finpulse.repository.CompanyRepository;
 import com.finpulse.repository.CompanyUserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +15,7 @@ public class FinPulseUserDetailsService {
 
     private final AdminRepository adminRepository;
     private final CompanyUserRepository companyUserRepository;
+    private final CompanyRepository companyRepository;
 
     public FinPulseUserDetails loadBySubject(Long subjectId, SubjectType subjectType){
 
@@ -31,6 +32,16 @@ public class FinPulseUserDetailsService {
 
         CompanyUser user = companyUserRepository.findById(subjectId)
                 .orElseThrow(() -> new UsernameNotFoundException("Company user not found: " + subjectId));
+
+        Company company = companyRepository.findById(user.getCompanyId())
+                .orElseThrow(() ->
+                        new DisabledException(
+                                "Company account is not available."));
+
+        if (company.getCompanyStatus() != CompanyStatus.ACTIVE) {
+            throw new DisabledException(
+                    "Company account is not active.");
+        }
 
         String compoundAuthority = "COMPANY_" + user.getRole().name();
 

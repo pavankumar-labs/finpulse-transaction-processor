@@ -26,27 +26,33 @@ public class EmailService {
         send(email, companyName, subject, html, "registration confirmation", companyCode);
     }
 
-    @Async
     public void sendApprovalMail(String email, String companyName, String companyCode, String rawApiKey, String rawOwnerPassword) {
-        String html = EmailTemplates.approvalNotice(companyName, companyCode, rawApiKey, rawOwnerPassword);
+
+        String html = EmailTemplates.approvalNotice(
+                companyName,
+                email,
+                companyCode,
+                rawApiKey,
+                rawOwnerPassword
+        );
         send(email, companyName, "FinPulse — You're Approved!", html, "approval notice", companyCode);
     }
 
 
-    @Async
+
     public void sendRejectionNotice(String email, String companyName, String companyCode) {
         String subject = "FinPulse — Application Update";
         String html = EmailTemplates.rejectionNotice(companyName);
         send(email, companyName, subject, html, "rejection notice", companyCode);
     }
 
-    @Async
+
     public void sendCredentialEmail(String email, String rawPassword) {
         String html = EmailTemplates.credentialIssued(email, rawPassword);
         send(email, email, "FinPulse — Your Account Is Ready", html, "credential issued", "n/a");
     }
 
-    @Async
+
     public void sendPasswordResetLink(String email, String rawToken) {
         String resetLink = frontendBaseUrl + "/reset-password?token=" + rawToken;
         String html = EmailTemplates.passwordResetLink(resetLink);

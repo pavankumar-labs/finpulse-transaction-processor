@@ -1,7 +1,6 @@
 package com.finpulse.listener;
 
-
-import com.finpulse.event.CompanyApprovedEvent;
+import com.finpulse.event.CompanyRejectedEvent;
 import com.finpulse.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,27 +12,28 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class CompanyApprovalEmailListener {
+public class CompanyRejectionEmailListener {
 
     private final EmailService emailService;
 
     @Async("notificationExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void onCompanyApproved(CompanyApprovedEvent event) {
+    public void onCompanyRejected(CompanyRejectedEvent event) {
+
         try {
-            emailService.sendApprovalMail(
+            emailService.sendRejectionNotice(
                     event.getContactEmail(),
                     event.getCompanyName(),
-                    event.getCompanyCode(),
-                    event.getRawApiKey(),
-                    event.getRawOwnerPassword()
+                    event.getCompanyCode()
             );
         } catch (Exception e) {
             log.error(
-                    "Approval email failed to send. contactEmail={}",
-                    event.getContactEmail(),
+                    "Failed to send company rejection email for company {}",
+                    event.getCompanyCode(),
                     e
             );
         }
+
+
     }
 }

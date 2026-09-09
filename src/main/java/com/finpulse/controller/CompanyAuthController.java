@@ -4,6 +4,7 @@ import com.finpulse.dto.*;
 import com.finpulse.entity.CompanyUser;
 import com.finpulse.entity.Role;
 import com.finpulse.entity.SubjectType;
+import com.finpulse.exception.UnauthorizedException;
 import com.finpulse.security.FinPulseUserDetails;
 import com.finpulse.security.JwtUtil;
 import com.finpulse.service.CompanyAuthSelfServiceService;
@@ -43,6 +44,9 @@ public class CompanyAuthController {
     @PostMapping("/api/auth/company/refresh")
     public ApiResponse<AuthResponseDTO> refresh(@RequestBody RefreshRequestDTO request) {
         var stored = refreshTokenService.validate(request.getRefreshToken());
+        if (stored.getSubjectType() != SubjectType.COMPANY_USER) {
+            throw new UnauthorizedException("Invalid refresh token");
+        }
         CompanyUser user = companyOnboardingService.getById(stored.getSubjectId());
 
         String newAccessToken = jwtUtil.generateAccessToken(

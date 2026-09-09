@@ -3,12 +3,15 @@ package com.finpulse.service;
 import com.finpulse.dto.CompanyRegistrationRequestDTO;
 import com.finpulse.dto.PendingCompanyDTO;
 import com.finpulse.entity.*;
+import com.finpulse.event.CompanyRejectedEvent;
 import com.finpulse.exception.CompanyNotFoundException;
 import com.finpulse.exception.InvalidCompanyStateException;
 import com.finpulse.repository.CompanyDecisionRepository;
 import com.finpulse.repository.CompanyRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,6 +24,7 @@ public class CompanyService {
     private final CompanyRepository companyRepository;
     private final CompanyDecisionRepository decisionRepository;
     private  final EmailService emailService;
+    private final ApplicationEventPublisher eventPublisher;
 
 
     public void register(CompanyRegistrationRequestDTO requestDTO){
@@ -50,6 +54,7 @@ public class CompanyService {
     }
 
 
+    @Transactional
     public void reject(Long companyId,String reason, Long rejectingAdminId){
         if (reason == null || reason.isBlank()) {
             throw new InvalidCompanyStateException("A rejection reason is required.");
@@ -65,8 +70,6 @@ public class CompanyService {
 
         company.setCompanyStatus(CompanyStatus.REJECTED);
         companyRepository.save(company);
-        emailService.sendRejectionNotice(company.getContactEmail(), company.getCompanyName(), company.getCompanyCode());
-
         decisionRepository.save(CompanyDecision.builder()
                 .companyId(companyId)
                 .adminId(rejectingAdminId)
@@ -74,6 +77,13 @@ public class CompanyService {
                 .decision(DecisionType.REJECTED)
                 .decidedAt(LocalDateTime.now())
                 .build());
+
+        eventPublisher.publishEvent(
+                new CompanyRejectedEvent(
+                        company.getContactEmail(),
+                        company.getCompanyName(),
+                        company.getCompanyCode()
+        ));
     }
 
     public CompanyStatus getStatusByCode(String companyCode){
