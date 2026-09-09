@@ -47,6 +47,7 @@ public class AdminAuthSelfServiceService {
 
     }
 
+    @Transactional
     public void initiatePasswordReset(String email) {
         Optional<Admin> admin = adminRepository.findByEmail(email);
         if (admin.isEmpty()) {
@@ -69,6 +70,7 @@ public class AdminAuthSelfServiceService {
     }
 
 
+    @Transactional
     public void resetPassword(String rawToken, String newPassword) {
         String hash = hash(rawToken);
 

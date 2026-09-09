@@ -8,6 +8,7 @@ import com.finpulse.exception.InvalidCredentialsException;
 import com.finpulse.exception.InvalidTokenException;
 import com.finpulse.repository.CompanyPasswordResetTokenRepository;
 import com.finpulse.repository.CompanyUserRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -42,6 +43,7 @@ public class CompanyAuthSelfServiceService {
     }
 
 
+    @Transactional
     public void initiatePasswordReset(String email) {
         Optional<CompanyUser> user = companyUserRepository.findByEmail(email);
         if (user.isEmpty()) {
@@ -65,6 +67,7 @@ public class CompanyAuthSelfServiceService {
     }
 
 
+    @Transactional
     public void resetPassword(String rawToken, String newPassword) {
         String hash = hash(rawToken);
 

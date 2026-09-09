@@ -27,6 +27,7 @@ public class AdminAuthService {
     private final PasswordEncoderConfig passwordEncoderConfig;
 
 
+    @Transactional
     public void registerAdmin(Role callerRole, String email){
 
         if (callerRole != Role.OWNER) {

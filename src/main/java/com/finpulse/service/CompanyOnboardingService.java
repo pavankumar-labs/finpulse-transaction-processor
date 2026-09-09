@@ -86,6 +86,16 @@ public class CompanyOnboardingService {
         CompanyUser user = companyUserRepository.findByEmail(email)
                 .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password."));
 
+        Company company = companyRepository.findById(user.getCompanyId())
+                .orElseThrow(() ->
+                        new InvalidCredentialsException(
+                                "Invalid email or password."));
+
+        if (company.getCompanyStatus() != CompanyStatus.ACTIVE) {
+            throw new InvalidCredentialsException(
+                    "Company account is not active.");
+        }
+
         if (!passwordEncoderConfig.passwordEncoder().matches(password, user.getPasswordHash())) {
             throw new InvalidCredentialsException("Invalid email or password.");
         }
@@ -107,8 +117,20 @@ public class CompanyOnboardingService {
     }
 
     public CompanyUser getById(Long userId) {
-        return companyUserRepository.findById(userId)
+        CompanyUser user = companyUserRepository.findById(userId)
                 .orElseThrow(() -> new InvalidCredentialsException("User not found."));
+
+        Company company = companyRepository.findById(user.getCompanyId())
+                .orElseThrow(() ->
+                        new InvalidCredentialsException(
+                                "Company account is not available."));
+
+        if (company.getCompanyStatus() != CompanyStatus.ACTIVE) {
+            throw new InvalidCredentialsException(
+                    "Company account is not active.");
+        }
+
+        return user;
     }
 }
 
