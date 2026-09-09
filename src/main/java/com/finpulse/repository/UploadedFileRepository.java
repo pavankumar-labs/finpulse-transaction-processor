@@ -15,7 +15,7 @@ public interface UploadedFileRepository extends JpaRepository<UploadedFile,Long>
 
     Optional<UploadedFile> findByFileProcessingId(String fileProcessingId);
 
-
+    void deleteByFileProcessingId(String fileProcessingId);
 
     @Modifying
     @Transactional

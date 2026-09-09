@@ -203,3 +203,4 @@ CREATE TABLE fraud_findings (
                                     FOREIGN KEY (company_id)
                                         REFERENCES companies(id)
 );
+

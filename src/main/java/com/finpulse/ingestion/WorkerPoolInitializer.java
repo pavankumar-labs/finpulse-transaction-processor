@@ -175,6 +175,20 @@ public class WorkerPoolInitializer {
             if (!chunkSucceeded) { log.error( "Chunk processing failed. Chunk will not be marked completed. " +
                     "fileProcessingId={}, fileName={}",
                     fileChunk.getFileProcessingId(), fileChunk.getFileName() );
+                try {
+
+                    transactionQueue.put(fileChunk);
+
+                    log.info(
+                            "Failed chunk re-queued successfully. " +
+                                    "fileProcessingId={}, fileName={}",
+                            fileChunk.getFileProcessingId(),
+                            fileChunk.getFileName()
+                    );
+
+                } catch (InterruptedException e){
+                    Thread.currentThread().interrupt();
+                }
                 return; }
 
             log.info(
@@ -335,6 +349,7 @@ public class WorkerPoolInitializer {
                     .rawLine(rawLine)
                     .status(RejectionStatus.PENDING)
                     .reason(reason)
+                    .rejectedAt(LocalDateTime.now())
                     .build();
             rejectedTransactionRepository.save(rejected);
         }
