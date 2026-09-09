@@ -8,26 +8,39 @@ import com.finpulse.repository.RejectedTransactionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 
+@Component
 @RequiredArgsConstructor
 public class FileProcessedNotificationListener {
 
     private final RejectedTransactionRepository rejectedTransactionRepository;
     private final NotificationRepository notificationRepository;
 
-    @Async
+    @Async("notificationExecutor")
     @EventListener
     public void onFileProcessingCompleted(FileProcessingCompletedEvent event){
 
-        long rejectedCount=rejectedTransactionRepository
-                .countByCompanyIdAndFileProcessingIdAndStatus(event.getCompanyId(),event.getFileProcessingId(), RejectionStatus.PENDING);
+        long rejectedCount = rejectedTransactionRepository
+                .countByCompanyIdAndFileProcessingIdAndStatus(
+                        event.getCompanyId(),
+                        event.getFileProcessingId(),
+                        RejectionStatus.PENDING
+                );
 
-        long resolvedCount=rejectedTransactionRepository
-                .countByCompanyIdAndFileProcessingIdAndStatus(event.getCompanyId(), event.getFileProcessingId(), RejectionStatus.RESOLVED);
+        long resolvedCount = rejectedTransactionRepository
+                .countByCompanyIdAndFileProcessingIdAndStatus(
+                        event.getCompanyId(),
+                        event.getFileProcessingId(),
+                        RejectionStatus.RESOLVED
+                );
 
         String message = String.format(
-                "File processed: %d row(s) rejected, %d row(s) resolved.", rejectedCount, resolvedCount);
+                "File processed: %d row(s) rejected, %d row(s) resolved.",
+                rejectedCount,
+                resolvedCount
+        );
 
         Notification notification = Notification.builder()
                 .companyId(event.getCompanyId())

@@ -7,7 +7,7 @@ import java.util.List;
 
 public interface NotificationRepository extends JpaRepository<Notification,Long> {
 
-    List<Notification> findByCompanyIdAndOrderByCreatedAtDesc(Long companyId);
+    List<Notification> findByCompanyIdOrderByCreatedAtDesc(Long companyId);
 
     Long countByCompanyIdAndViewedFalse(Long companyId);
 
