@@ -3,6 +3,7 @@ package com.finpulse.controller;
 import com.finpulse.dto.*;
 import com.finpulse.entity.Admin;
 import com.finpulse.entity.SubjectType;
+import com.finpulse.exception.UnauthorizedException;
 import com.finpulse.repository.AdminRepository;
 import com.finpulse.security.FinPulseUserDetails;
 import com.finpulse.security.JwtUtil;
@@ -43,6 +44,11 @@ public class AdminAuthController {
     @PostMapping("/api/auth/admin/refresh")
     public ApiResponse<AuthResponseDTO> refresh(@RequestBody RefreshRequestDTO request) {
         var stored = refreshTokenService.validate(request.getRefreshToken());
+
+        if (stored.getSubjectType() != SubjectType.ADMIN) {
+            throw new UnauthorizedException("Invalid refresh token");
+        }
+
         Admin admin = adminAuthService.getById(stored.getSubjectId());
 
         String newAccessToken = jwtUtil.generateAccessToken(

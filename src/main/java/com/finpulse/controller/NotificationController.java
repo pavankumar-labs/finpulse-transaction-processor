@@ -27,7 +27,7 @@ public class NotificationController {
 
         Long companyId = principal.getCompanyId();
 
-        List<Notification> notifications = notificationRepository.findByCompanyIdAndOrderByCreatedAtDesc(companyId);
+        List<Notification> notifications = notificationRepository.findByCompanyIdOrderByCreatedAtDesc(companyId);
         notifications.forEach(n->n.setViewed(true));
         notificationRepository.saveAll(notifications);
         return ResponseEntity.ok(ApiResponse.success(notifications, "Notifications retrieved"));
