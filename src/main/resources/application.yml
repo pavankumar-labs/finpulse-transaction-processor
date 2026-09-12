@@ -54,15 +54,14 @@ fraud:
 
 brevo:
   api:
-    key: ${BREVO_API_KEY}
+    key: ${BREVO_API_KEY:}
     base-url: https://api.brevo.com
   sender:
-    email: ${BREVO_SENDER_EMAIL}
-    name: ${BREVO_SENDER_NAME}
-
+    email: ${BREVO_SENDER_EMAIL:test@finpulse.local}
+    name: ${BREVO_SENDER_NAME:FinPulse}
 
 jwt:
-  secret: ${JWT_SECRET}
+  secret: ${JWT_SECRET:this_is_a_dummy_secret_key_32chars_minimum}
   access-token-expiry-minutes: 30
   refresh-token-expiry-days: 3
 

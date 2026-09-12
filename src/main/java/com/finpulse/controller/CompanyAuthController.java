@@ -31,7 +31,7 @@ public class CompanyAuthController {
 
     @PostMapping("/api/auth/company/login")
     public ApiResponse<AuthResponseDTO> login(@RequestBody LoginRequestDTO request) {
-        CompanyUser user = companyOnboardingService.verifyLogin(request.getEmail(), request.getPassword());
+        AuthenticatedCompanyUser user = companyOnboardingService.verifyLogin(request.getEmail(), request.getPassword());
 
         String accessToken = jwtUtil.generateAccessToken(
                 user.getId(), SubjectType.COMPANY_USER, user.getCompanyId(), user.getRole().name(), user.isMustChangePassword());

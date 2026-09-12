@@ -1,6 +1,7 @@
 package com.finpulse.service;
 
 import com.finpulse.config.PasswordEncoderConfig;
+import com.finpulse.dto.AuthenticatedCompanyUser;
 import com.finpulse.entity.*;
 import com.finpulse.event.CompanyApprovedEvent;
 import com.finpulse.exception.CompanyNotFoundException;
@@ -82,7 +83,7 @@ public class CompanyOnboardingService {
         regenerate(owner);
     }
 
-    public CompanyUser verifyLogin(String email, String password) {
+    public AuthenticatedCompanyUser verifyLogin(String email, String password) {
         CompanyUser user = companyUserRepository.findByEmail(email)
                 .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password."));
 
@@ -101,7 +102,12 @@ public class CompanyOnboardingService {
         }
 
         credentialPolicy.enforceNotExpired(user.isMustChangePassword(), user.getCredentialExpiresAt());
-        return user;
+        return AuthenticatedCompanyUser.builder()
+                .id(user.getId())
+                .companyId(user.getCompanyId())
+                .role(user.getRole())
+                .mustChangePassword(user.isMustChangePassword())
+                .build();
     }
 
 
