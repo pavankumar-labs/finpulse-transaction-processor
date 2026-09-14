@@ -1,7 +1,6 @@
 package com.finpulse.fraud.context;
 
 import com.finpulse.entity.Transaction;
-
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -19,8 +18,6 @@ public class AnalysisContext {
     private final Map<String, List<Transaction>> transactionsInFileByReceiver;
     private final Map<String, List<Transaction>> receiverHistoryExcludingToday;
 
-
-
     private AnalysisContext(Set<String> sendersInFile,
                             Set<String> receiversInFile,
                             Map<String, List<Transaction>> senderHistory,
@@ -37,7 +34,6 @@ public class AnalysisContext {
         this.senderHistoryExcludingToday = senderHistoryExcludingToday;
         this.transactionsInFileByReceiver = transactionsInFileByReceiver;
         this.receiverHistoryExcludingToday = receiverHistoryExcludingToday;
-
     }
 
     public static AnalysisContext build(List<Transaction> fileTransactions,
@@ -71,10 +67,7 @@ public class AnalysisContext {
 
         Map<String, List<Transaction>> receiverHistoryNoToday = buildExcludingToday(byReceiver, inFileByReceiver);
 
-
         return new AnalysisContext(senders,receivers,bySender,byReceiver, inFileBySender, senderHistoryNoToday, inFileByReceiver, receiverHistoryNoToday);
-
-
     }
 
     private static  Map<String,List<Transaction>> groupAndCap(List<Transaction> rawHistory, Function<Transaction,String> roleKey){
@@ -88,14 +81,9 @@ public class AnalysisContext {
                     .sorted(Comparator.comparing(Transaction::getTransactionTime).reversed())
                     .limit(MAX_HISTORY_PER_ACCOUNT)
                     .collect(Collectors.toUnmodifiableList());
-
             capped.put(entry.getKey(),sorted);
-
-
         }
         return capped;
-
-
     }
 
     private static Map<String, List<Transaction>> buildExcludingToday(
