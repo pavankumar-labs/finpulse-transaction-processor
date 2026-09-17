@@ -5,7 +5,7 @@ import com.finpulse.entity.*;
 import com.finpulse.event.FileProcessingCompletedEvent;
 import com.finpulse.fraud.context.AnalysisContext;
 import com.finpulse.fraud.model.RuleResult;
-import com.finpulse.fraud.rule.*;
+import com.finpulse.fraud.rules.*;
 import com.finpulse.repository.FraudFindingRepository;
 import com.finpulse.repository.NotificationRepository;
 import com.finpulse.repository.TransactionRepository;

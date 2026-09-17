@@ -19,7 +19,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class JwtAuthenticationFilterTest {
+class JwtAuthenticationFilterTest {
 
     @Mock private FinPulseUserDetailsService userDetailsService;
     @Mock private JwtUtil jwtUtil;

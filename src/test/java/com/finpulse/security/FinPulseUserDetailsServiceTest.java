@@ -18,7 +18,7 @@ import static org.mockito.Mockito.when;
 
 @Slf4j
 @ExtendWith(MockitoExtension.class)
-public class FinPulseUserDetailsServiceTest {
+class FinPulseUserDetailsServiceTest {
 
     @Mock private AdminRepository adminRepository;
     @Mock private CompanyRepository companyRepository;

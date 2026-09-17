@@ -9,7 +9,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class JwtUtilTest {
+class JwtUtilTest {
 
     JwtUtil jwtUtil=new JwtUtil();
 

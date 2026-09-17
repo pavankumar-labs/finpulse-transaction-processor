@@ -21,7 +21,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-public class CompanyServiceTest {
+class CompanyServiceTest {
 
     @Mock private  CompanyRepository companyRepository;
     @Mock private  CompanyDecisionRepository decisionRepository;

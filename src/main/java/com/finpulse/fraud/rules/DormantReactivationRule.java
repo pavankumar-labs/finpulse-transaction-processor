@@ -1,4 +1,4 @@
-package com.finpulse.fraud.rule;
+package com.finpulse.fraud.rules;
 
 import com.finpulse.entity.Transaction;
 import com.finpulse.fraud.context.AnalysisContext;
