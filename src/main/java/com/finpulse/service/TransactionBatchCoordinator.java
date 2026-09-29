@@ -32,7 +32,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class TransactionBatchCoordinator {
 
-    private static final int CHUNK_SIZE = 4000;
+    static final int CHUNK_SIZE = 4000;
     private static final int COPY_BUFFER_SIZE = 8192;
 
     private final MeterRegistry registry;

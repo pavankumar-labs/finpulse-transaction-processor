@@ -151,7 +151,7 @@ class TransactionBatchCoordinatorTest {
             throws IOException, InterruptedException {
         StringBuilder csv = new StringBuilder();
         csv.append("transaction_id,sender_account,receiver_account,amount,transaction_time,sender_account_type,receiver_account_type\n");
-        for (int i = 1; i <= 4001; i++) {
+        for (int i = 1; i <= TransactionBatchCoordinator.CHUNK_SIZE + 1; i++) {
             csv.append("TXN").append(i).append(",ACC001,ACC002,100.00,2026-09-15T10:30:00,personal,business\n");
         }
         Long companyId = 1L;
@@ -169,11 +169,34 @@ class TransactionBatchCoordinatorTest {
         verify(transactionQueue, times(2)).put(chunkCaptor.capture());
         List<FileChunk> chunks = chunkCaptor.getAllValues();
 
-        assertEquals(4000, chunks.get(0).getLines().size());
+        assertEquals(TransactionBatchCoordinator.CHUNK_SIZE, chunks.get(0).getLines().size());
         assertEquals(1, chunks.get(1).getLines().size());
         assertEquals(processingId, chunks.get(0).getFileProcessingId());
         assertEquals(processingId, chunks.get(1).getFileProcessingId());
         assertEquals(companyId, chunks.get(0).getCompanyId());
         assertEquals(companyId, chunks.get(1).getCompanyId());
+    }
+
+    @Test
+    void shouldCreateExactlyOneChunkWhenFileHasExactlyChunkSizeRows()
+            throws IOException, InterruptedException {
+        StringBuilder csv = new StringBuilder();
+        csv.append("transaction_id,sender_account,receiver_account,amount,transaction_time,sender_account_type,receiver_account_type\n");
+        for (int i = 1; i <= TransactionBatchCoordinator.CHUNK_SIZE; i++) {
+            csv.append("TXN").append(i).append(",ACC001,ACC002,100.00,2026-09-15T10:30:00,personal,business\n");
+        }
+        Long companyId = 1L;
+        when(uploadedFileRepository.findByCompanyIdAndFileHash(eq(companyId), anyString()))
+                .thenReturn(Optional.empty());
+
+        coordinator.streamFileContents("exact-boundary.csv", inputStream(csv.toString()), companyId);
+
+        ArgumentCaptor<UploadedFile> uploadedFileCaptor = ArgumentCaptor.forClass(UploadedFile.class);
+        verify(uploadedFileRepository).save(uploadedFileCaptor.capture());
+        assertEquals(1, uploadedFileCaptor.getValue().getTotalChunks());
+
+        ArgumentCaptor<FileChunk> chunkCaptor = ArgumentCaptor.forClass(FileChunk.class);
+        verify(transactionQueue, times(1)).put(chunkCaptor.capture());
+        assertEquals(TransactionBatchCoordinator.CHUNK_SIZE, chunkCaptor.getValue().getLines().size());
     }
 }
