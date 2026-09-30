@@ -57,4 +57,17 @@ public final class TestData {
                 .senderAccountType(AccountType.PERSONAL)
                 .receiverAccountType(AccountType.PERSONAL);
     }
+
+    public static FraudFinding.FraudFindingBuilder fraudFinding(Long companyId){
+        int n = SEQUENCE.incrementAndGet();
+        return FraudFinding.builder()
+                .companyId(companyId)
+                .fileProcessingId("file-processing-" + n)
+                .accountNumber("ACC-" + n)
+                .riskLevel(RiskLevel.HIGH)
+                .triggeredRuleCodes("VELOCITY")
+                .reason("Test fraud finding " + n)
+                .status(FraudStatus.PENDING)
+                .createdAt(LocalDateTime.now());
+    }
 }
