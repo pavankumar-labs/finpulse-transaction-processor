@@ -70,4 +70,17 @@ public final class TestData {
                 .status(FraudStatus.PENDING)
                 .createdAt(LocalDateTime.now());
     }
+
+    public static RejectedTransaction.RejectedTransactionBuilder rejectedTransaction(Long companyId, String transactionId){
+        int n = SEQUENCE.incrementAndGet();
+        return RejectedTransaction.builder()
+                .companyId(companyId)
+                .fileProcessingId("file-processing-" + n)
+                .fileName("upload-" + n + ".csv")
+                .rawLine(transactionId + ",ACC-OLD,ACC-OLD2,100.00,invalid-date,personal,business")
+                .reason("INVALID_DATE")
+                .transactionId(transactionId)
+                .status(RejectionStatus.PENDING)
+                .rejectedAt(LocalDateTime.now());
+    }
 }

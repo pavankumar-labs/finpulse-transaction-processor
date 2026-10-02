@@ -1,8 +1,8 @@
 package com.finpulse.dto;
 
-import lombok.Getter;
+import lombok.Data;
 
-@Getter
+@Data
 public class RefreshRequestDTO {
 
     private String refreshToken;
